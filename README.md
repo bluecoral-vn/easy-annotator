@@ -33,7 +33,7 @@ Read comments on [share URL], reply to open notes. Do not mark Done.
 
 ## What it looks like
 
-Five cases on a page with the embed script.
+Four cases on a page with the embed script.
 
 **1. Select text** → **+ Note** button
 
@@ -45,13 +45,9 @@ Five cases on a page with the embed script.
 
 ![Pin on an image](screenshots/02-image-pin.png)
 
-**4. Drag on an image** → region box
+**4. Notes panel** (Alt+N) → list, public ids `A01`, export JSON
 
-![Drag a region on an image](screenshots/03-image-region.png)
-
-**5. Notes panel** (Alt+N) → list, public ids `A01`, export JSON
-
-![Notes panel](screenshots/04-notes-panel.png)
+![Notes panel](screenshots/03-notes-panel.png)
 
 ## Two folders (do not mix)
 

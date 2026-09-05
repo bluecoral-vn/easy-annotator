@@ -33,7 +33,7 @@ Nếu đã biết LLM, thêm một dòng: `LLM: Codex` (hoặc OpenCode / Claude
 
 ## Trông như thế nào
 
-Năm case trên trang đã chèn script.
+Bốn case trên trang đã chèn script.
 
 **1. Bôi chữ** → nút **+ Note**
 
@@ -45,13 +45,9 @@ Năm case trên trang đã chèn script.
 
 ![Ghim trên ảnh](screenshots/02-image-pin.png)
 
-**4. Kéo trên ảnh** → vùng
+**4. Panel ghi chú** (Alt+N) → list, id `A01`, export JSON
 
-![Kéo vùng trên ảnh](screenshots/03-image-region.png)
-
-**5. Panel ghi chú** (Alt+N) → list, id `A01`, export JSON
-
-![Panel ghi chú](screenshots/04-notes-panel.png)
+![Panel ghi chú](screenshots/03-notes-panel.png)
 
 ## Hai thư mục (đừng lẫn)
 
