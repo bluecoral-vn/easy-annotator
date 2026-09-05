@@ -1,111 +1,127 @@
 # Easy Annotator
 
-Ghi chú trên HTML: bôi chữ, ghim ảnh, lưu JSON, AI đọc và trả lời. PHP 7.4+, không npm.
+[English](README.md) | [Tiếng Việt](README.vi.md)
 
-Người dùng **không gõ lệnh**. Dán một prompt dưới đây cho AI.
+Notes on HTML: select text, pin a control, pin images, save JSON, AI reads and replies. PHP 7.4+, no npm.
+
+Made by [Blue Coral](https://bluecoral.vn/), a digital agency in Saigon. We design and build websites, apps, and eCommerce that simply work.
+
+Users **do not type commands**. Paste a prompt below for the AI.
 
 Repo: `https://github.com/bluecoral-vn/easy-annotator`
 
-## Prompt có sẵn
+## Ready-made prompts
 
-### 1. Setup skill (repo đang viết tài liệu)
+### 1. Setup the skill (in a docs repo)
 
-Dán, thay domain:
+Paste, then set the domain:
 
 ```
-Setup Easy Annotator từ https://github.com/bluecoral-vn/easy-annotator
+Setup Easy Annotator from https://github.com/bluecoral-vn/easy-annotator
 Domain: https://YOUR_HOST/easy-annotator
 ```
 
-AI tự hỏi LLM nếu chưa rõ (gợi ý: Codex, OpenCode, Claude; nhận Cursor), copy skill đúng chỗ, ghi `{ "domain": "…" }`, tạo token. Không điền `api` / `script` / `pages`.
+The AI detects the coding agent if needed (Codex, OpenCode, Claude; Cursor is fine), copies the skill, writes `{ "domain": "…" }` to `annotator.config.json`, and creates a token. Do not fill `api` / `script` / `pages`.
 
-Nếu đã biết LLM, thêm một dòng: `LLM: Codex` (hoặc OpenCode / Claude / Cursor).
+If you already know the agent, add: `LLM: Codex` (or OpenCode / Claude / Cursor).
 
-### 2. Viết tài liệu để người review
-
-```
-Viết [tên tài liệu] thành HTML để review, chèn annotator, upload, gửi link.
-```
-
-Skill **luôn** ra `.html` + thẻ `<script src="{domain}/index.php">`. Không ra Markdown cho bản người đọc.
-
-### 3. Trả lời comment
+### 2. Reply to comments
 
 ```
-Đọc comment trên [URL chia sẻ], reply các note chưa xong. Không đánh Done.
+Read comments on [share URL], reply to open notes. Do not mark Done.
 ```
 
-### 4. Ghi chú chỉ cho AI (không review)
+## What it looks like
 
-```
-Ghi [nội dung] ra Markdown, chỉ để AI đọc, không chèn annotator.
-```
+Five cases on a page with the embed script.
 
-## Hai thư mục (đừng lẫn)
+**1. Select text** → **+ Note** button
 
-| Thư mục | Đưa đi đâu |
+![Select text and add a note](screenshots/01-select-text.png)
+
+**2. Pin** (icon) → click a menu, button, or shape
+
+**3. Click an image** → numbered pin
+
+![Pin on an image](screenshots/02-image-pin.png)
+
+**4. Drag on an image** → region box
+
+![Drag a region on an image](screenshots/03-image-region.png)
+
+**5. Notes panel** (Alt+N) → list, public ids `A01`, export JSON
+
+![Notes panel](screenshots/04-notes-panel.png)
+
+## Two folders (do not mix)
+
+| Folder | Where it goes |
 |---|---|
-| `host/` | **Chỉ cái này** lên PHP hosting. Upload **nội dung** folder (file nằm ngay document root của `{domain}`). |
-| `skill/easy-annotator/` | Copy vào repo tài liệu, theo LLM (bảng dưới). |
+| `host/` | **Only this** to PHP hosting. Upload the **contents** (files sit at the document root of `{domain}`). |
+| `skill/easy-annotator/` | Copy into the docs repo, per LLM (table below). |
 
-Không upload lên hosting: `skill/`, `.cursor/`, README, `AGENTS.md`, `tests/`, `annotator.config.json`, token.
+Do not upload to hosting: `skill/`, `.cursor/`, README, `AGENTS.md`, `tests/`, tokens.
 
-Sau khi upload `host/`, domain ví dụ `https://x.example.com/easy-annotator` phải mở được `{domain}/index.php`.
+After upload, `{domain}/index.php` must load, e.g. `https://x.example.com/easy-annotator/index.php`.
 
-## Chèn thủ công (không dùng AI)
+## Manual embed (no AI)
 
 ```html
 <script src="https://YOUR_HOST/easy-annotator/index.php"></script>
 ```
 
+The AI reads `domain` from `annotator.config.json` and uses `{domain}/index.php`. There is no `annotator.config.example.json`.
+
 ## HTML vs Markdown
 
-| Việc | File |
+| Job | File |
 |---|---|
-| Người đọc, comment, share | `.html` + embed |
-| README, skill, spec, ghi chú cho model | `.md` |
+| Humans read, comment, share | `.html` + embed |
+| README, skill, spec, notes for the model | `.md` |
 
-## Config (AI ghi, không commit)
+## Config
+
+Committed at the repo root. One field:
 
 ```json
 { "domain": "https://YOUR_HOST/easy-annotator" }
 ```
 
-Suy ra: embed `{domain}/index.php`, API `{domain}/annotations.php`, trang `{domain}/index.php?name={slug}`.
+Derived: embed `{domain}/index.php`, API `{domain}/annotations.php`, page `{domain}/index.php?name={slug}`.
 
-Token: máy bạn `.annotator-token`. Server: `anno-data/.ai-token` (cạnh file PHP trong `host/`) hoặc env `ANNOTATOR_AI_TOKEN`.
+Token (not in git): `.annotator-token` on your machine. Server: `anno-data/.ai-token` next to the PHP files in `host/`, or env `ANNOTATOR_AI_TOKEN`.
 
-## Skill path
+## Skill paths
 
-| Agent | Thư mục |
+| Agent | Folder |
 |---|---|
 | Codex | `.agents/skills/easy-annotator/` |
 | OpenCode | `.opencode/skills/easy-annotator/` |
 | Claude | `.claude/skills/easy-annotator/` |
 | Cursor | `.cursor/skills/easy-annotator/` |
 
-Gốc trong repo này: `skill/easy-annotator/`.
+Source in this repo: `skill/easy-annotator/`.
 
-## Dùng trên trang
+## On the page
 
-Bôi chữ → nút coral. Click ảnh → ghim. Kéo ảnh → vùng. Alt+N panel. Esc đóng popover rồi panel. Chỉ sửa note của mình. Resolve trên reply. AI chỉ đọc và reply. Id: `01`…`99`, rồi `A01`.
+Select text → + Note. Pin icon → click a menu, button, or shape. Click image → pin. Drag on image → region. Alt+N panel. Esc closes the popover, then Pin mode, then the panel. Edit only your notes. Resolve on replies. AI reads and replies only. Ids: `A01`…`A99`, then `B01`.
 
-## Hosting (một lần)
+## Hosting (once)
 
-1. Upload **nội dung** `host/` lên folder PHP public.
-2. Tạo token, ghi `anno-data/.ai-token` (chmod 600) trên server. AI setup có thể làm bước này nếu checkout này chứa `host/`.
-3. Demo local: trỏ vhost vào `host/` (xem `dev.md`).
+1. Upload the **contents** of `host/` to a public PHP folder.
+2. Create a token, write `anno-data/.ai-token` (chmod 600) on the server. Setup can do this if the checkout contains `host/`.
+3. Local demo: point the vhost at `host/` (see `dev.md`).
 
-`anno-data/` tự tạo, không public.
+`anno-data/` is created automatically and is not public.
 
-## Chống spam (ngắn)
+## Abuse limits (short)
 
-Mở để comment, không captcha. Trần server: 10 ghi/IP/phút, 40 ghi/trang/phút, 8 URL mới/10 phút/IP, 200 note/trang, 4000 ký tự, JSON 256 KB, PUT cần `X-Owner-Key`, upload HTML cần token AI. Honeypot trình duyệt chỉ chặn bot form. Sau Cloudflare: `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` nếu cần. Không làm trang `/setup` public.
+Open comments, no captcha. Server caps: 10 writes/IP/minute, 40 writes/page/minute, 8 new URLs/10 min/IP, 200 notes/page, 4000 characters, 256 KB JSON, PUT needs `X-Owner-Key`, HTML upload needs the AI token. The browser honeypot only stops naive form bots. Behind Cloudflare set `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` if needed. No public `/setup` page.
 
-## Gợi ý
+## Suggestions
 
-Giữ: người không AI nhớ một thẻ script; người có AI dán prompt; hosting chỉ `host/`; review luôn HTML.
+Keep: one script tag without AI; one pasted prompt with AI; hosting is `host/` only; reviews are always HTML.
 
-Có thể làm tiếp: deploy `host/` bằng rsync/FTP do AI chạy nếu user đưa sẵn credential; không gộp skill vào file PHP (tránh lỡ upload nhầm). Consumer repo không clone PHP, chỉ skill + domain.
+Possible next: AI rsync/FTP of `host/` if the user already has credentials. Do not fold the skill into PHP files. A consumer repo does not clone PHP, only the skill + domain.
 
-Không thêm: tài khoản, captcha, bắt HTTPS cho embed.
+Do not add: accounts, captcha, forcing HTTPS for embed.

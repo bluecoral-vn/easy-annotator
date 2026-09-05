@@ -25,7 +25,7 @@ if (!$asScript && !$asDocument) {
 if ($asScript) {
     header('Content-Type: application/javascript; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
-    header('Cache-Control: public, max-age=300');
+    header('Cache-Control: no-cache');
     $api = bc_public_base() . '/annotations.php';
     echo 'window.ANNOTATOR_API=' . json_encode($api, JSON_UNESCAPED_SLASHES) . ";\n";
     readfile(__DIR__ . '/annotator.js');

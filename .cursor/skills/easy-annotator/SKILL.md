@@ -1,6 +1,6 @@
 ---
 name: easy-annotator
-description: Sets up Easy Annotator from a GitHub repo URL and a PHP domain, writes human review docs as HTML with the embed script, uploads pages, and replies by public id (01, A01). Markdown is only for AI-readable context. Use when the user pastes the easy-annotator repo link, mentions domain, annotator, review HTML, pubId, or notes on a page.
+description: Sets up Easy Annotator from a GitHub repo URL and a PHP domain, writes human review docs as HTML with the embed script, uploads pages, and replies by public id (A01). Markdown is only for AI-readable context. Use when the user pastes the easy-annotator repo link, mentions domain, annotator, review HTML, pubId, or notes on a page.
 ---
 
 # Easy Annotator
@@ -27,7 +27,7 @@ This git repo has two trees. **Never upload the whole repo to PHP hosting.**
 <script src="{domain}/index.php"></script>
 ```
 
-Read `domain` from `annotator.config.json`. If that file is missing, run Setup first. Do not skip the tag because the server also injects it. Local preview and other hosts need the tag.
+Read `domain` from repo-root `annotator.config.json` (the file committed in this project; there is no `.example` copy). Derive embed as `{domain}/index.php`. If the file is missing or `domain` still contains `YOUR_HOST`, run Setup and write that same filename. Do not skip the tag because the server also injects it. Local preview and other hosts need the tag.
 
 **AI-only context** (README, skills, architecture, `dev.md`, notes the model should read): `.md`. Do not turn those into annotated HTML.
 
@@ -37,7 +37,7 @@ Never export a human review as Markdown.
 
 ## Setup (AI runs this, no commands for the user)
 
-Trigger: missing `annotator.config.json`, or the user pastes the GitHub repo + domain.
+Trigger: missing `annotator.config.json`, or `domain` still contains `YOUR_HOST`, or the user pastes the GitHub repo + domain.
 
 1. Detect the coding agent. If the user named one, use it. Else if exactly one of these folders exists, use it. Else ask, suggesting **Codex**, **OpenCode**, **Claude** (also accept Cursor).
 
@@ -48,7 +48,7 @@ Trigger: missing `annotator.config.json`, or the user pastes the GitHub repo + d
 | Claude | `.claude/skills/easy-annotator/` |
 | Cursor | `.cursor/skills/easy-annotator/` |
 
-2. Domain: use the URL they gave (folder of the PHP install, no filename), e.g. `https://x.example.com/easy-annotator`. Do not ask for `api` / `script` / `pages`.
+2. Domain: use the URL they gave (folder of the PHP install, no filename), e.g. `https://x.example.com/easy-annotator`. Read and update `annotator.config.json` only. Do not ask for `api` / `script` / `pages`. Do not create `annotator.config.example.json`.
 
 3. Copy the skill folder (`SKILL.md` + `html-template.html`) into the agent path:
 
@@ -60,15 +60,17 @@ https://raw.githubusercontent.com/bluecoral-vn/easy-annotator/main/skill/easy-an
 https://raw.githubusercontent.com/bluecoral-vn/easy-annotator/main/skill/easy-annotator/html-template.html
 ```
 
-4. Write `annotator.config.json` at the repo root:
+4. Write or update `annotator.config.json` at the repo root (this is the only config file):
 
 ```json
 { "domain": "https://x.example.com/easy-annotator" }
 ```
 
+When embedding or uploading, always `json.load` this file and use `domain`. Never guess the host.
+
 5. If `.annotator-token` is missing, generate one and write it (chmod 600). If this checkout contains `host/index.php`, also write the same value to `host/anno-data/.ai-token` (PHP data dir next to the host files). Otherwise tell the user once: put that value on the server as `anno-data/.ai-token` or env `ANNOTATOR_AI_TOKEN`.
 
-6. Ensure `.gitignore` has `annotator.config.json`, `.annotator-token`, and `anno-data/`.
+6. Ensure `.gitignore` has `.annotator-token` and `anno-data/`. Do **not** gitignore `annotator.config.json` (it only holds the public domain).
 
 Then continue the user's task. Do not paste curl cheatsheets at the user.
 
@@ -102,7 +104,7 @@ TOKEN=$(cat .annotator-token)
 
 curl -sS "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$PAGE_URL")"
 
-curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$PAGE_URL")&action=reply&id=01" \
+curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$PAGE_URL")&action=reply&id=A01" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"text":"Updated the headline on slide 2","author":"AI"}'

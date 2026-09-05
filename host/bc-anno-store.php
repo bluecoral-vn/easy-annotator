@@ -6,10 +6,7 @@ function bc_pub_id_from_index($n) {
     $series = (int) floor($n / 99);
     $num = ($n % 99) + 1;
     $pad = $num < 10 ? ('0' . $num) : (string) $num;
-    if ($series === 0) {
-        return $pad;
-    }
-    return chr(64 + $series) . $pad;
+    return chr(65 + $series) . $pad;
 }
 
 function bc_next_pub_id($annos) {
@@ -20,14 +17,14 @@ function bc_next_pub_id($annos) {
             continue;
         }
         $used[$a['pubId']] = true;
-        if (!preg_match('/^([A-Z])?(\d{2})$/', $a['pubId'], $m)) {
+        if (!preg_match('/^([A-Z])(\d{2})$/', $a['pubId'], $m)) {
             continue;
         }
         $num = (int) $m[2];
         if ($num < 1 || $num > 99) {
             continue;
         }
-        $series = $m[1] !== '' ? (ord($m[1]) - 64) : 0;
+        $series = ord($m[1]) - 65;
         $idx = $series * 99 + ($num - 1);
         if ($idx > $max) {
             $max = $idx;
