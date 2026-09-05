@@ -357,3 +357,111 @@ function bc_json_doc_count($dir) {
     }
     return $n;
 }
+
+function bc_parse_age($spec) {
+    $spec = trim((string) $spec);
+    if ($spec === '') {
+        return 0;
+    }
+    if (preg_match('/^(\d+)\s*d$/i', $spec, $m)) {
+        return (int) $m[1] * 86400;
+    }
+    if (preg_match('/^(\d+)\s*h$/i', $spec, $m)) {
+        return (int) $m[1] * 3600;
+    }
+    if (preg_match('/^(\d+)\s*m$/i', $spec, $m)) {
+        return (int) $m[1] * 60;
+    }
+    if (preg_match('/^(\d+)$/', $spec, $m)) {
+        return (int) $m[1] * 86400;
+    }
+    return 0;
+}
+
+function bc_parse_ts($s) {
+    $s = trim((string) $s);
+    if ($s === '') {
+        return 0;
+    }
+    if (preg_match('/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/', $s, $m)) {
+        $t = strtotime($m[1] . ' UTC');
+        return $t ? $t : 0;
+    }
+    $t = strtotime($s);
+    return $t ? $t : 0;
+}
+
+function bc_comment_ts($row) {
+    $best = 0;
+    if (!is_array($row)) {
+        return 0;
+    }
+    foreach (array('updatedAt', 'createdAt', 'ts') as $k) {
+        if (!empty($row[$k])) {
+            $best = max($best, bc_parse_ts($row[$k]));
+        }
+    }
+    foreach ((array) (isset($row['edits']) ? $row['edits'] : array()) as $ed) {
+        if (is_array($ed) && !empty($ed['ts'])) {
+            $best = max($best, bc_parse_ts($ed['ts']));
+        }
+    }
+    foreach ((array) (isset($row['replies']) ? $row['replies'] : array()) as $r) {
+        $best = max($best, bc_comment_ts($r));
+    }
+    return $best;
+}
+
+function bc_doc_last_ts($doc, $fileMtime) {
+    $best = 0;
+    $doc = is_array($doc) ? $doc : array();
+    foreach ((array) (isset($doc['annotations']) ? $doc['annotations'] : array()) as $a) {
+        $best = max($best, bc_comment_ts($a));
+    }
+    foreach ((array) (isset($doc['deletedIds']) ? $doc['deletedIds'] : array()) as $t) {
+        $best = max($best, bc_comment_ts($t));
+    }
+    if ($best <= 0) {
+        return (int) $fileMtime;
+    }
+    return $best;
+}
+
+function bc_is_page_json($path) {
+    return (bool) preg_match('/^[a-f0-9]{40}\.json$/', basename((string) $path));
+}
+
+function bc_purge_old_json($dir, $maxAgeSec, $now) {
+    $dir = rtrim((string) $dir, '/');
+    $maxAgeSec = (int) $maxAgeSec;
+    $now = (int) $now;
+    $out = array('removed' => 0, 'kept' => 0, 'skipped' => 0);
+    if ($maxAgeSec <= 0 || $dir === '' || !is_dir($dir)) {
+        return $out;
+    }
+    $cutoff = $now - $maxAgeSec;
+    $files = glob($dir . '/*.json');
+    if (!is_array($files)) {
+        return $out;
+    }
+    foreach ($files as $f) {
+        if (!bc_is_page_json($f)) {
+            $out['skipped']++;
+            continue;
+        }
+        $raw = @file_get_contents($f);
+        $doc = is_string($raw) ? json_decode($raw, true) : null;
+        $mtime = @filemtime($f);
+        $last = bc_doc_last_ts(is_array($doc) ? $doc : array(), $mtime ? $mtime : 0);
+        if ($last >= $cutoff) {
+            $out['kept']++;
+            continue;
+        }
+        if (@unlink($f)) {
+            $out['removed']++;
+        } else {
+            $out['skipped']++;
+        }
+    }
+    return $out;
+}

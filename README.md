@@ -110,6 +110,14 @@ Select text → + Note. Pin icon → click a menu, button, or shape. Click image
 
 `anno-data/` is created automatically and is not public.
 
+Optional cron (age is on the crontab, not in PHP). Deletes `anno-data/*.json` page files whose newest comment is older than the age you pass. CLI only:
+
+```
+0 3 * * * php /path/to/host/cron-purge.php 90d
+```
+
+`90d` / `24h` / `30` (days). Do not hit this file over HTTP.
+
 ## Abuse limits (short)
 
 Open comments, no captcha. Server caps: 10 writes/IP/minute, 40 writes/page/minute, 8 new URLs/10 min/IP, 200 notes/page, 4000 characters, 256 KB JSON, PUT needs `X-Owner-Key`, HTML upload needs the AI token. The browser honeypot only stops naive form bots. Behind Cloudflare set `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` if needed. No public `/setup` page.

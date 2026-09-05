@@ -3,3 +3,5 @@
 Upload **only these files** to hosting. `{domain}` must point here (`index.php` at the folder URL).
 
 Do not upload the parent git repo (`skill/`, README, tests, `.cursor/`).
+
+Optional: `php cron-purge.php 90d` from crontab (CLI only; age is the argument).

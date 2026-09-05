@@ -110,6 +110,14 @@ Bôi chữ → + Note. Icon Pin → click menu, nút, hoặc shape. Click ảnh 
 
 `anno-data/` tự tạo, không public.
 
+Cron tùy chọn (tuổi ghi trên crontab, không cấu hình trong PHP). Xóa file `anno-data/*.json` của trang mà comment mới nhất đã quá hạn. Chỉ CLI:
+
+```
+0 3 * * * php /path/to/host/cron-purge.php 90d
+```
+
+`90d` / `24h` / `30` (ngày). Không gọi file này bằng HTTP.
+
 ## Chống spam (ngắn)
 
 Mở để comment, không captcha. Trần server: 10 ghi/IP/phút, 40 ghi/trang/phút, 8 URL mới/10 phút/IP, 200 note/trang, 4000 ký tự, JSON 256 KB, PUT cần `X-Owner-Key`, upload HTML cần token AI. Honeypot trình duyệt chỉ chặn bot form. Sau Cloudflare: `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` nếu cần. Không làm trang `/setup` public.

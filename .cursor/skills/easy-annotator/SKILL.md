@@ -116,3 +116,4 @@ curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.p
 - Put tokens in git or in HTML.
 - Ask the user to set `api`, `script`, or `pages`, or to paste `annotator.js` / `ANNOTATOR_API`.
 - Ask the user to run curl. The agent runs it.
+- Store comment TTL in PHP. Optional purge is crontab: `php cron-purge.php 90d` (CLI only).
