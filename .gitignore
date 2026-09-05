@@ -1,0 +1,8 @@
+.DS_Store
+anno-data/
+annotator.config.json
+.annotator-token
+tests/
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
