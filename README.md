@@ -125,3 +125,7 @@ Keep: one script tag without AI; one pasted prompt with AI; hosting is `host/` o
 Possible next: AI rsync/FTP of `host/` if the user already has credentials. Do not fold the skill into PHP files. A consumer repo does not clone PHP, only the skill + domain.
 
 Do not add: accounts, captcha, forcing HTTPS for embed.
+
+## License
+
+[GNU GPLv3](LICENSE). Copyright (C) 2026 [Blue Coral](https://bluecoral.vn).

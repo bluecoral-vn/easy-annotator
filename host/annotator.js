@@ -1,4 +1,6 @@
 /* bc-annotator v3 | embed: <script src="index.php"></script>
+   Copyright (C) 2026 Blue Coral <https://bluecoral.vn>
+   SPDX-License-Identifier: GPL-3.0-or-later
    API is inferred from the script URL (index.php or annotator.js → annotations.php).
    optional override: window.ANNOTATOR_API="https://host/annotations.php"
    AI reply: POST $API?url=&action=reply&id=A01  Authorization: Bearer <anno-data/.ai-token>
@@ -392,6 +394,15 @@ function apiHeaders(json){
   return h;
 }
 
+function isAnnoDom(n){
+  var p=n;
+  while(p){
+    if(isUI(p)) return true;
+    if(p.nodeType===1&&p.classList&&(p.classList.contains('bc-anno-hl')||p.classList.contains('bc-anno-imgwrap'))) return true;
+    p=p.parentNode;
+  }
+  return false;
+}
 function isUI(n){
   var p=n;
   while(p){
@@ -611,7 +622,12 @@ function captureFromEl(el, cx, cy){
 }
 function ensureImgWrap(img){
   if(img.parentNode&&img.parentNode.classList&&img.parentNode.classList.contains('bc-anno-imgwrap')) return img.parentNode;
-  var w=document.createElement('span');w.className='bc-anno-imgwrap';
+  var w=document.createElement('span'), cs, d;
+  w.className='bc-anno-imgwrap';
+  try{cs=window.getComputedStyle(img);}catch(x){cs=null;}
+  d=cs&&cs.display?cs.display:'inline-block';
+  w.style.display=(d==='block'||d==='flex'||d==='grid')?'block':'inline-block';
+  if(cs&&cs.verticalAlign) w.style.verticalAlign=cs.verticalAlign;
   img.parentNode.insertBefore(w,img);w.appendChild(img);return w;
 }
 function renderHl(){
@@ -692,11 +708,18 @@ function refresh(){
 function injectStyle(){
   var st=document.createElement('style');st.setAttribute('data-bc-anno-ui','1');
   st.textContent=
-  '.bc-anno-hl{background:rgba(255,86,0,.18);border-bottom:2px solid #FF5600;border-radius:2px;cursor:pointer;}'+
+  '[data-bc-anno-ui],[data-bc-anno-ui] *,[data-bc-anno-ui]::before,[data-bc-anno-ui]::after,[data-bc-anno-ui] *::before,[data-bc-anno-ui] *::after{box-sizing:border-box;}'+
+  '.bc-anno-sb,.bc-anno-ed,.bc-anno-fabs,.bc-anno-toast,.bc-anno-selbtn,.bc-anno-elhover,.bc-anno-dragbox,.bc-anno-pin,.bc-anno-ibox,.bc-anno-elpin,.bc-anno-draft-hl{'+
+    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;'+
+    'font-size:13px;line-height:1.5;font-weight:400;font-style:normal;letter-spacing:normal;text-transform:none;text-shadow:none;color:#111;isolation:isolate;}'+
+  '.bc-anno-sb button,.bc-anno-ed button,.bc-anno-selbtn,.bc-anno-fab,.bc-anno-gate button,.bc-anno-acts button,.bc-anno-reply button,'+
+  '.bc-anno-sb select,.bc-anno-sb input,.bc-anno-ed input,.bc-anno-ed textarea,.bc-anno-item textarea,.bc-anno-gate input{'+
+    'appearance:none;-webkit-appearance:none;font:inherit;color:inherit;background:transparent;border:none;box-shadow:none;outline:none;margin:0;padding:0;max-width:none;min-width:0;width:auto;height:auto;border-radius:0;letter-spacing:normal;text-transform:none;line-height:inherit;}'+
+  '.bc-anno-sb a,.bc-anno-ed a{color:inherit;text-decoration:none;background:transparent;}'+
+  '.bc-anno-hl{display:inline;background:rgba(255,86,0,.18);border-bottom:2px solid #FF5600;border-radius:2px;cursor:pointer;}'+
   '.bc-anno-hl.bc-flash{animation:bcAnnoFlash 1.2s ease;}'+
   '@keyframes bcAnnoFlash{0%,100%{background:rgba(255,86,0,.18)}30%{background:rgba(255,86,0,.45)}}'+
-  '.bc-anno-imgwrap{position:relative;display:inline-block;max-width:100%;overflow:visible;}'+
-  '.bc-anno-imgwrap img{display:block;max-width:100%;height:auto;}'+
+  '.bc-anno-imgwrap{position:relative;}'+
   '.bc-anno-pin{position:absolute;min-width:26px;height:22px;padding:0 5px;margin:-11px 0 0 -13px;display:flex;align-items:center;justify-content:center;background:#FF5600;border:2px solid #fff;border-radius:999px;box-shadow:0 4px 12px rgba(255,86,0,.35);cursor:grab;z-index:6;pointer-events:auto;color:#fff;font:700 9px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;user-select:none;box-sizing:border-box;letter-spacing:.02em;}'+
   '.bc-anno-elpin{position:fixed;z-index:2147482990;cursor:pointer;margin:-11px 0 0 -13px;}'+
   '.bc-anno-elhover{position:fixed;z-index:2147482988;border:2px solid #FF5600;border-radius:12px;background:rgba(255,86,0,.1);pointer-events:none;box-sizing:border-box;}'+
@@ -711,36 +734,36 @@ function injectStyle(){
   '.bc-anno-sb{position:fixed;right:16px;bottom:16px;width:400px;max-width:calc(100vw - 24px);height:80vh;max-height:80vh;background:#fff;border:1px solid #D3CEC6;border-radius:24px;box-shadow:0 12px 40px rgba(17,17,17,.12);z-index:2147483000;display:flex;flex-direction:column;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111;overflow:hidden;}'+
   '.bc-anno-sb.bc-hide{opacity:0;pointer-events:none;visibility:hidden;transform:translate(12px,16px);}'+
   '.bc-anno-sb-h{padding:12px 10px 12px 14px;background:#fff;color:#111;flex:none;display:flex;align-items:center;gap:6px;border-bottom:1px solid #EBE7E1;}'+
-  '.bc-anno-sb-h select,.bc-anno-sb-h button:not(.x){font-size:11px;padding:6px 10px;border-radius:999px;border:none;background:#F5F1EC;color:#111;cursor:pointer;font-weight:600;}'+
-  '.bc-anno-sb-h button:not(.x):hover,.bc-anno-sb-h select:hover{background:#EBE7E1;}'+
-  '.bc-anno-sb-h .x{margin-left:auto;cursor:pointer;background:none;border:none;color:#626260;font-size:18px;padding:4px 8px;line-height:1;border-radius:999px;}'+
-  '.bc-anno-sb-h .x:hover{background:#F5F1EC;color:#111;}'+
+  '.bc-anno-sb-h select,.bc-anno-sb-h button:not(.bc-anno-x){font-size:11px;padding:6px 10px;border-radius:999px;border:none;background:#F5F1EC;color:#111;cursor:pointer;font-weight:600;}'+
+  '.bc-anno-sb-h button:not(.bc-anno-x):hover,.bc-anno-sb-h select:hover{background:#EBE7E1;}'+
+  '.bc-anno-sb-h .bc-anno-x{margin-left:auto;cursor:pointer;background:none;border:none;color:#626260;font-size:18px;padding:4px 8px;line-height:1;border-radius:999px;}'+
+  '.bc-anno-sb-h .bc-anno-x:hover{background:#F5F1EC;color:#111;}'+
   '.bc-anno-list{flex:1;overflow-y:auto;padding:14px;min-height:0;background:#fff;}'+
   '.bc-anno-item{border:none;border-radius:16px;padding:12px 14px;margin-bottom:10px;background:#F5F1EC;cursor:pointer;}'+
   '.bc-anno-item:hover{background:#EBE7E1;}'+
-  '.bc-anno-item .who{font-size:12px;font-weight:700;color:#111;margin-bottom:2px;display:flex;align-items:center;gap:8px;}'+
+  '.bc-anno-who{font-size:12px;font-weight:700;color:#111;margin-bottom:2px;display:flex;align-items:center;gap:8px;}'+
   '.bc-anno-pinno{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:20px;padding:0 6px;background:#FF5600;color:#fff;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em;}'+
-  '.bc-anno-item .bc{font-size:11px;color:#626260;margin-bottom:4px;word-break:break-word;}'+
-  '.bc-anno-item .ex{font-size:12px;color:#626260;font-style:normal;border-left:2px solid #FF5600;padding-left:8px;margin:4px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}'+
-  '.bc-anno-item .cm{font-size:13px;white-space:pre-wrap;word-break:break-word;color:#111;}'+
-  '.bc-anno-item .mt{font-size:11px;color:#7B7B78;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;}'+
+  '.bc-anno-crumb{font-size:11px;color:#626260;margin-bottom:4px;word-break:break-word;}'+
+  '.bc-anno-ex{font-size:12px;color:#626260;font-style:normal;border-left:2px solid #FF5600;padding-left:8px;margin:4px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}'+
+  '.bc-anno-cm{font-size:13px;white-space:pre-wrap;word-break:break-word;color:#111;}'+
+  '.bc-anno-mt{font-size:11px;color:#7B7B78;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;}'+
   '.bc-anno-badge{font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:#EBE7E1;color:#626260;}'+
-  '.bc-anno-badge.ok{background:rgba(11,223,80,.18);color:#0A7A32;}'+
-  '.bc-anno-badge.fz{background:#FFF1E8;color:#FF5600;}'+
-  '.bc-anno-badge.or{background:rgba(255,32,103,.12);color:#C41C1C;}'+
-  '.bc-anno-badge.ap{background:rgba(0,7,203,.08);color:#0007CB;}'+
+  '.bc-anno-badge.bc-anno-ok{background:rgba(11,223,80,.18);color:#0A7A32;}'+
+  '.bc-anno-badge.bc-anno-fz{background:#FFF1E8;color:#FF5600;}'+
+  '.bc-anno-badge.bc-anno-or{background:rgba(255,32,103,.12);color:#C41C1C;}'+
+  '.bc-anno-badge.bc-anno-ap{background:rgba(0,7,203,.08);color:#0007CB;}'+
   '.bc-anno-acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}'+
   '.bc-anno-acts button{font-size:11.5px;padding:5px 12px;border-radius:999px;border:none;background:#fff;color:#111;cursor:pointer;font-weight:600;}'+
   '.bc-anno-acts button:hover{background:#EBE7E1;}'+
-  '.bc-anno-acts button.pri{background:#111;border:none;color:#fff;}'+
-  '.bc-anno-acts button.pri:hover{background:#313130;}'+
-  '.bc-anno-acts button.dz:hover{background:#FF2067;color:#fff;}'+
+  '.bc-anno-acts button.bc-anno-pri{background:#111;border:none;color:#fff;}'+
+  '.bc-anno-acts button.bc-anno-pri:hover{background:#313130;}'+
+  '.bc-anno-acts button.bc-anno-dz:hover{background:#FF2067;color:#fff;}'+
   '.bc-anno-item textarea{width:100%;min-height:58px;border:none;border-radius:12px;padding:10px;font:13px/1.5 inherit;box-sizing:border-box;background:#fff;}'+
   '.bc-anno-replies{max-height:120px;overflow-y:auto;margin-top:8px;padding:8px 10px;background:#fff;border-radius:12px;}'+
   '.bc-anno-reply{font-size:12px;margin:0 0 6px;word-break:break-word;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}'+
-  '.bc-anno-reply .rt{min-width:0;flex:1;}'+
+  '.bc-anno-rt{min-width:0;flex:1;}'+
   '.bc-anno-reply button{flex:none;font-size:10.5px;padding:3px 8px;border-radius:999px;border:none;background:#F5F1EC;color:#111;cursor:pointer;font-weight:600;}'+
-  '.bc-anno-reply .ra{font-weight:700;color:#0007CB;}'+
+  '.bc-anno-ra{font-weight:700;color:#0007CB;}'+
   '.bc-anno-empty{text-align:center;color:#626260;font-size:13px;padding:36px 12px;}'+
   '.bc-anno-ft{flex:none;padding:8px 12px 8px 16px;border-top:1px solid #EBE7E1;font-size:11px;color:#7B7B78;display:flex;align-items:center;gap:10px;}'+
   '.bc-anno-ft-h{min-width:0;flex:1;}'+
@@ -767,14 +790,14 @@ function injectStyle(){
   '.bc-anno-ed textarea,.bc-anno-ed input[type=text]{width:100%;min-height:74px;border:none;border-radius:12px;padding:10px 12px;font:13px/1.5 inherit;box-sizing:border-box;margin-bottom:8px;background:#F5F1EC;}'+
   '.bc-anno-ed input[type=text]{min-height:0;}'+
   '.bc-anno-ed textarea:focus,.bc-anno-ed input:focus{outline:2px solid rgba(255,86,0,.35);outline-offset:0;background:#fff;}'+
-  '.bc-anno-ed .r{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}'+
+  '.bc-anno-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}'+
   '.bc-anno-ed button{font-size:12.5px;padding:7px 14px;border-radius:999px;border:none;background:#F5F1EC;cursor:pointer;font-weight:600;color:#111;}'+
-  '.bc-anno-ed button.pri{background:#FF5600;color:#fff;}'+
-  '.bc-anno-ed button.pri:hover{background:#FE4C02;}'+
+  '.bc-anno-ed button.bc-anno-pri{background:#FF5600;color:#fff;}'+
+  '.bc-anno-ed button.bc-anno-pri:hover{background:#FE4C02;}'+
   '.bc-anno-hp{position:absolute;left:-10000px;width:1px;height:1px;opacity:0;}'+
   '.bc-anno-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:8px 14px;border-radius:999px;z-index:2147483004;font:12.5px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;box-shadow:0 8px 24px rgba(17,17,17,.16);}'+
   '@media (max-width:767px){.bc-anno-sb{left:0;right:0;top:0;bottom:0;width:100%;max-width:none;height:auto;max-height:none;border-radius:0;}.bc-anno-sb.bc-hide{transform:translateY(12px);}.bc-anno-fabs{bottom:12px;right:12px;}}';
-  document.head.appendChild(st);
+  (document.body||document.head).appendChild(st);
 }
 
 function panelOpen(){return sb&&!sb.classList.contains('bc-hide');}
@@ -936,7 +959,7 @@ function buildUI(){
     '</select>'+
     '<button type="button" data-export>Export</button>'+
     '<button type="button" data-import>Import</button>'+
-    '<button type="button" class="x" data-x>&#10005;</button>'+
+    '<button type="button" class="bc-anno-x" data-x>&#10005;</button>'+
   '</div>'+
   '<div class="bc-anno-gate">'+
     '<p>Enter your name before viewing the note list.</p>'+
@@ -946,7 +969,7 @@ function buildUI(){
   '<div class="bc-anno-list"></div>'+
   '<div class="bc-anno-ft">'+
     '<span class="bc-anno-ft-h">Select text, Pin a control, or click / drag an image | Alt+N | Esc</span>'+
-    '<a class="bc-anno-ft-i" href="https://github.com/bluecoral-vn/easy-annotator" target="_blank" rel="noopener noreferrer" title="Easy Annotator on GitHub" aria-label="Easy Annotator on GitHub">'+
+    '<a class="bc-anno-ft-i" href="https://bluecoral.vn" target="_blank" rel="noopener noreferrer" title="Blue Coral" aria-label="Blue Coral">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.2V16"/><path d="M12 8h.01"/></svg>'+
     '</a>'+
   '</div>';
@@ -1045,9 +1068,9 @@ function renderList(){
   var html='', keepBottom=readPrefs().sort==='createdAsc';
   var pinNos=Model.imagePinNumbers(annos);
   items.forEach(function(a){
-    var q=a.anchorQ==='anchored'?'<span class="bc-anno-badge ok">anchored</span>'
-          :a.anchorQ==='fuzzy'?'<span class="bc-anno-badge fz">fuzzy</span>'
-          :'<span class="bc-anno-badge or">orphaned</span>';
+    var q=a.anchorQ==='anchored'?'<span class="bc-anno-badge bc-anno-ok">anchored</span>'
+          :a.anchorQ==='fuzzy'?'<span class="bc-anno-badge bc-anno-fz">fuzzy</span>'
+          :'<span class="bc-anno-badge bc-anno-or">orphaned</span>';
     var excerpt=a.kind==='image'?('[Image] '+(a.alt||a.srcNorm||a.src||''))
           :a.kind==='el'?('['+((a.elTag||'el').charAt(0).toUpperCase()+(a.elTag||'el').slice(1))+'] '+(a.elName||a.exact||''))
           :(a.exact||'');
@@ -1060,25 +1083,25 @@ function renderList(){
       replies.forEach(function(r,ri){
         var rid=r.id||('i'+ri);
         rh+='<div class="bc-anno-reply">'+
-          '<div class="rt"><span class="ra">'+esc(r.author||'Anonymous')+'</span>: '+esc(r.text||'')+
-          (r.resolved?' <span class="bc-anno-badge ap">resolved</span>':'')+'</div>'+
+          '<div class="bc-anno-rt"><span class="bc-anno-ra">'+esc(r.author||'Anonymous')+'</span>: '+esc(r.text||'')+
+          (r.resolved?' <span class="bc-anno-badge bc-anno-ap">resolved</span>':'')+'</div>'+
           (isMine(r)?'<button data-act="resolve-reply" data-rid="'+esc(rid)+'">'+(r.resolved?'Unresolve':'Resolve')+'</button>':'')+
           '</div>';
       });
       rh+='</div>';
     }
     html+='<div class="bc-anno-item" data-id="'+a.id+'">'+
-      '<div class="who">'+(pinNo?'<span class="bc-anno-pinno">'+esc(pinNo)+'</span>':'')+esc(a.author||'Anonymous')+'</div>'+
-      (a.breadcrumb&&a.breadcrumb.length?'<div class="bc">'+esc(a.breadcrumb.join(' > '))+'</div>':'')+
-      '<div class="ex">'+esc(excerpt)+'</div>'+
-      '<div class="cm">'+esc(Model.commentOf(a))+'</div>'+
+      '<div class="bc-anno-who">'+(pinNo?'<span class="bc-anno-pinno">'+esc(pinNo)+'</span>':'')+esc(a.author||'Anonymous')+'</div>'+
+      (a.breadcrumb&&a.breadcrumb.length?'<div class="bc-anno-crumb">'+esc(a.breadcrumb.join(' > '))+'</div>':'')+
+      '<div class="bc-anno-ex">'+esc(excerpt)+'</div>'+
+      '<div class="bc-anno-cm">'+esc(Model.commentOf(a))+'</div>'+
       rh+
-      '<div class="mt"><span>'+fmt(a.updatedAt)+((a.edits&&a.edits.length>1)?' | edited '+a.edits.length+' times':'')+'</span>'+q+'</div>'+
+      '<div class="bc-anno-mt"><span>'+fmt(a.updatedAt)+((a.edits&&a.edits.length>1)?' | edited '+a.edits.length+' times':'')+'</span>'+q+'</div>'+
       '<div class="bc-anno-acts">'+
         (mine?'<button data-act="edit">Edit</button>':'')+
         '<button data-act="reply">Reply</button>'+
-        (mine?(currentTab==='open'?'<button data-act="done" class="pri">Done</button>':'<button data-act="reopen" class="pri">Reopen</button>'):'')+
-        (mine?'<button data-act="del" class="dz">Delete</button>':'')+
+        (mine?(currentTab==='open'?'<button data-act="done" class="bc-anno-pri">Done</button>':'<button data-act="reopen" class="bc-anno-pri">Reopen</button>'):'')+
+        (mine?'<button data-act="del" class="bc-anno-dz">Delete</button>':'')+
       '</div></div>';});
   var prev=list.scrollTop, max=list.scrollHeight;
   list.innerHTML=html;
@@ -1115,11 +1138,11 @@ function renderList(){
 }
 function startEdit(el,a){
   if(!isMine(a)) return;
-  var cm=el.querySelector('.cm'),acts=el.querySelector('.bc-anno-acts');
+  var cm=el.querySelector('.bc-anno-cm'),acts=el.querySelector('.bc-anno-acts');
   var ta=document.createElement('textarea');ta.value=Model.commentOf(a);ta.maxLength=Model.MAX_TEXT;
   cm.replaceWith(ta);acts.style.display='none';
   var bar=document.createElement('div');bar.className='bc-anno-acts';
-  bar.innerHTML='<button class="pri" data-s>Save</button><button data-c>Cancel</button>';
+  bar.innerHTML='<button class="bc-anno-pri" data-s>Save</button><button data-c>Cancel</button>';
   el.appendChild(bar);
   bar.querySelector('[data-s]').onclick=function(){
     var v=ta.value.trim();if(!v)return;
@@ -1136,7 +1159,7 @@ function startReply(el,a){
   var ta=document.createElement('textarea');ta.placeholder='Reply...';ta.maxLength=Model.MAX_TEXT;
   el.appendChild(ta);
   var bar=document.createElement('div');bar.className='bc-anno-acts';
-  bar.innerHTML='<button class="pri" data-s>Send</button><button data-c>Cancel</button>';
+  bar.innerHTML='<button class="bc-anno-pri" data-s>Send</button><button data-c>Cancel</button>';
   el.appendChild(bar);
   bar.querySelector('[data-s]').onclick=function(){
     var v=ta.value.trim();if(!v)return;
@@ -1192,7 +1215,7 @@ function onMouseup(ev){
   var txt=sel.toString();if(!txt||txt.trim().length<2) return;
   var r;try{r=sel.getRangeAt(0).getBoundingClientRect();}catch(x){return;}
   if(selButton) selButton.remove();
-  selButton=document.createElement('button');selButton.className='bc-anno-selbtn';
+  selButton=document.createElement('button');selButton.type='button';selButton.className='bc-anno-selbtn';
   selButton.setAttribute('data-bc-anno-ui','1');selButton.textContent='+ Note';
   var pos=placeNear(r,46);
   var x=Math.min(window.innerWidth-110,Math.max(8,r.left+r.width/2-55));
@@ -1206,7 +1229,7 @@ function editorFields(title){
     (needName?'<input type="text" data-ed-name placeholder="Your name" maxlength="80">':'')+
     '<textarea placeholder="Note / update request for AI..." maxlength="4000"></textarea>'+
     '<input class="bc-anno-hp" data-hp tabindex="-1" autocomplete="off">'+
-    '<div class="r"><button data-c>Cancel</button><button class="pri" data-s>Save</button></div>';
+    '<div class="bc-anno-row"><button data-c>Cancel</button><button class="bc-anno-pri" data-s>Save</button></div>';
 }
 function bindEditor(a, openedAt, onSave){
   var ta=editPopover.querySelector('textarea');ta.focus();
@@ -1538,10 +1561,16 @@ function init(){
     var item=sb.querySelector('.bc-anno-item[data-id="'+id+'"]');
     if(item) item.scrollIntoView({block:'nearest'});
   },true);
-  var mo=new MutationObserver(debounce(function(){
+  var mo=new MutationObserver(debounce(function(muts){
+    var i, m;
     if(!index) return;
-    var t=buildIndex().text;
-    if(t!==lastText) refresh();
+    muts=muts||[];
+    for(i=0;i<muts.length;i++){
+      m=muts[i];
+      if(isAnnoDom(m.target)) continue;
+      if(buildIndex().text!==lastText) refresh();
+      return;
+    }
   },600));
   mo.observe(document.body,{childList:true,subtree:true,characterData:true});
   document.addEventListener('scroll',syncElPins,true);

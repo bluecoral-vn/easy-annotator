@@ -125,3 +125,7 @@ Giữ: người không AI nhớ một thẻ script; người có AI dán prompt;
 Có thể làm tiếp: deploy `host/` bằng rsync/FTP do AI chạy nếu user đưa sẵn credential; không gộp skill vào file PHP. Consumer repo không clone PHP, chỉ skill + domain.
 
 Không thêm: tài khoản, captcha, bắt HTTPS cho embed.
+
+## Giấy phép
+
+[GNU GPLv3](LICENSE). Copyright (C) 2026 [Blue Coral](https://bluecoral.vn).
