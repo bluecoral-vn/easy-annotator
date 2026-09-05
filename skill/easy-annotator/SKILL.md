@@ -1,61 +1,82 @@
 ---
 name: easy-annotator
-description: Sets up Easy Annotator with a domain-only config, writes review HTML, uploads pages, and replies to comments by public id (01, A01). Use when the user mentions annotator, notes on HTML, review docs, pubId, or embedding index.php.
+description: Sets up Easy Annotator from a GitHub repo URL and a PHP domain, writes human review docs as HTML with the embed script, uploads pages, and replies by public id (01, A01). Markdown is only for AI-readable context. Use when the user pastes the easy-annotator repo link, mentions domain, annotator, review HTML, pubId, or notes on a page.
 ---
 
 # Easy Annotator
 
-Self-hosted notes on HTML. Each operator runs their own PHP copy. Do not assume a shared host.
-
-Config is one field: `domain`. Derive everything else:
+Self-hosted notes on HTML. Config is one field: `domain`. Derive:
 
 - embed = `{domain}/index.php`
 - api = `{domain}/annotations.php`
 - page = `{domain}/index.php?name={slug}`
-- token file = `.annotator-token` (never in git)
+- token = `.annotator-token` (never in git)
 
-## Setup (AI runs this)
+This git repo has two trees. **Never upload the whole repo to PHP hosting.**
 
-If `annotator.config.json` is missing, **do not stop**. Run setup:
+| Path | Where it belongs |
+|---|---|
+| `host/` | PHP hosting only (upload the **contents** of this folder) |
+| `skill/easy-annotator/` | Docs repos (copy into the LLM skill folder) |
 
-1. Ask which coding agent this repo uses. Suggest **Codex**, **OpenCode**, **Claude**. Accept Cursor too.
-2. Ask the public folder URL of the PHP install (no filename), e.g. `https://x.example.com/easy-annotator`.
-3. Write `annotator.config.json`:
+## HTML vs Markdown (hard rule)
 
-```json
-{ "domain": "https://x.example.com/easy-annotator" }
+**Human review** (pitch, slide copy, shareable writeup, anything people comment on): always `.html`. Always include the embed before `</body>`:
+
+```html
+<script src="{domain}/index.php"></script>
 ```
 
-4. If `.annotator-token` is missing, generate one (`php -r 'echo bin2hex(random_bytes(16)), "\n";'` or `openssl rand -hex 16`) and write it. chmod 600.
-5. If this checkout **is** the PHP server, write the same value to `anno-data/.ai-token` (chmod 600). Otherwise tell the user to put that value on the server once (`anno-data/.ai-token` or env `ANNOTATOR_AI_TOKEN`).
-6. Copy **this skill folder** (`skill/easy-annotator/` in this repo, or the folder that contains this SKILL.md) to the agent path:
+Read `domain` from `annotator.config.json`. If that file is missing, run Setup first. Do not skip the tag because the server also injects it. Local preview and other hosts need the tag.
 
-| Agent | Path |
+**AI-only context** (README, skills, architecture, `dev.md`, notes the model should read): `.md`. Do not turn those into annotated HTML.
+
+If the user says "viết doc / review / share / comment được": default HTML. If they say "ghi chú cho AI / spec / skill": default Markdown. If unclear, HTML.
+
+Never export a human review as Markdown.
+
+## Setup (AI runs this, no commands for the user)
+
+Trigger: missing `annotator.config.json`, or the user pastes the GitHub repo + domain.
+
+1. Detect the coding agent. If the user named one, use it. Else if exactly one of these folders exists, use it. Else ask, suggesting **Codex**, **OpenCode**, **Claude** (also accept Cursor).
+
+| Agent | Skill path |
 |---|---|
 | Codex | `.agents/skills/easy-annotator/` |
 | OpenCode | `.opencode/skills/easy-annotator/` |
 | Claude | `.claude/skills/easy-annotator/` |
 | Cursor | `.cursor/skills/easy-annotator/` |
 
-7. Ensure `.gitignore` includes `annotator.config.json`, `.annotator-token`, and `anno-data/`.
+2. Domain: use the URL they gave (folder of the PHP install, no filename), e.g. `https://x.example.com/easy-annotator`. Do not ask for `api` / `script` / `pages`.
 
-Then continue the user's task. Do not ask them to paste JSON keys other than `domain`.
+3. Copy the skill folder (`SKILL.md` + `html-template.html`) into the agent path:
 
-## Review docs → HTML
+- If this checkout has `skill/easy-annotator/SKILL.md`, copy from there.
+- Else download from the repo they pasted (default `https://github.com/bluecoral-vn/easy-annotator`):
 
-Write shareable reviews as `.html`, not Markdown. Dev-only notes stay Markdown (README, skills, tests).
-
-1. Start from [html-template.html](html-template.html).
-2. Hosted pages (`index.php?name=`) get the embed injected on GET. Do not ask the user to paste a script tag for those.
-3. HTML opened somewhere else (local file, other host) needs one tag before `</body>`:
-
-```html
-<script src="{domain}/index.php"></script>
+```
+https://raw.githubusercontent.com/bluecoral-vn/easy-annotator/main/skill/easy-annotator/SKILL.md
+https://raw.githubusercontent.com/bluecoral-vn/easy-annotator/main/skill/easy-annotator/html-template.html
 ```
 
-Default slug from the filename (`Pitch VCFM.html` → `pitch-vcfm`). Only ask if that slug is empty or already taken.
+4. Write `annotator.config.json` at the repo root:
 
-Upload:
+```json
+{ "domain": "https://x.example.com/easy-annotator" }
+```
+
+5. If `.annotator-token` is missing, generate one and write it (chmod 600). If this checkout contains `host/index.php`, also write the same value to `host/anno-data/.ai-token` (PHP data dir next to the host files). Otherwise tell the user once: put that value on the server as `anno-data/.ai-token` or env `ANNOTATOR_AI_TOKEN`.
+
+6. Ensure `.gitignore` has `annotator.config.json`, `.annotator-token`, and `anno-data/`.
+
+Then continue the user's task. Do not paste curl cheatsheets at the user.
+
+## Write + share HTML
+
+1. Start from [html-template.html](html-template.html). Fill the content. Keep the embed script, with `{domain}` replaced from config.
+2. Slug from the filename (`Pitch VCFM.html` → `pitch-vcfm`). Only ask if empty or taken.
+3. Upload. Print **only** the share URL from the JSON `url` field.
 
 ```bash
 DOMAIN=$(python3 -c 'import json; print(json.load(open("annotator.config.json"))["domain"].rstrip("/"))')
@@ -67,7 +88,7 @@ RESP=$(curl -sS -X PUT "$DOMAIN/index.php?name=my-slug" \
 python3 -c 'import json,sys; print(json.loads(sys.argv[1])["url"])' "$RESP"
 ```
 
-After upload, give the user **only that URL**. Do not dump the JSON. Comments key off that exact URL.
+Comments key off that exact URL. After a human-facing edit, PUT again to the same `name`.
 
 ## Comments (AI)
 
@@ -87,11 +108,9 @@ curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.p
   -d '{"text":"Updated the headline on slide 2","author":"AI"}'
 ```
 
-After a reply, PUT the updated HTML to the same `name` so the share link stays stable.
-
 ## Do not
 
+- Upload `skill/`, README, tests, or `.cursor/` to PHP hosting. Hosting is `host/` contents only.
 - Put tokens in git or in HTML.
-- Export Markdown for human review of product copy.
-- Ask the user to set `api`, `script`, or `pages` keys.
-- Ask the user to paste `annotator.js` or `ANNOTATOR_API`.
+- Ask the user to set `api`, `script`, or `pages`, or to paste `annotator.js` / `ANNOTATOR_API`.
+- Ask the user to run curl. The agent runs it.

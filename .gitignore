@@ -1,5 +1,6 @@
 .DS_Store
 anno-data/
+**/anno-data/
 annotator.config.json
 .annotator-token
 tests/
