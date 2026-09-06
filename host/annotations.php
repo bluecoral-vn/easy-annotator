@@ -3,8 +3,8 @@
    GET  annotations.php?url=<pageUrl>
    PUT  annotations.php?url=<pageUrl>  JSON body + header X-Owner-Key (ACL merge)
    POST annotations.php?url=<pageUrl>&action=reply&id=<pubId>
-        human: X-Owner-Key | AI: Authorization: Bearer <token>
-   AI token: env ANNOTATOR_AI_TOKEN or anno-data/.ai-token */
+        human: X-Owner-Key | AI: JSON body, optional Bearer
+   HTML PUT still uses env ANNOTATOR_AI_TOKEN or anno-data/.ai-token */
 require_once __DIR__ . '/bc-rate-limit.php';
 require_once __DIR__ . '/bc-anno-store.php';
 
@@ -202,11 +202,12 @@ if ($method === 'POST') {
     $bearer = bc_bearer_header();
     $aiTok = bc_read_ai_token($dir);
     $isAi = bc_ai_ok($bearer, $aiTok);
-    if (!$isAi && !bc_owner_key_ok($owner)) {
-        fail(401, 'need X-Owner-Key or AI bearer token');
+    $isHuman = !$isAi && bc_owner_key_ok($owner);
+    $actor = $isHuman ? array('type' => 'human', 'ownerKey' => $owner) : array('type' => 'ai');
+    $author = isset($payload['author']) ? trim((string) $payload['author']) : '';
+    if ($author === '') {
+        $author = $isHuman ? '' : 'AI';
     }
-    $actor = $isAi ? array('type' => 'ai') : array('type' => 'human', 'ownerKey' => $owner);
-    $author = isset($payload['author']) ? (string) $payload['author'] : ($isAi ? 'AI' : '');
     if (bc_char_len($author) > $L['maxAuthor']) {
         fail(413, 'author too long');
     }

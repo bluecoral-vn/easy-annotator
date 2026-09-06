@@ -1,6 +1,6 @@
 # Easy Annotator
 
-[English](README.md) | [Tiếng Việt](README.vi.md)
+[ENGLISH](README.md) | [VIỆT NAM](README.VN.md)
 
 Ghi chú trên HTML: bôi chữ, ghim control, ghim ảnh, lưu JSON, AI đọc và trả lời. PHP 7.4+, không npm.
 
@@ -21,7 +21,7 @@ Setup Easy Annotator từ https://github.com/bluecoral-vn/easy-annotator
 Domain: https://YOUR_HOST/easy-annotator
 ```
 
-AI tự hỏi LLM nếu chưa rõ (gợi ý: Codex, OpenCode, Claude; nhận Cursor), copy skill đúng chỗ, ghi `{ "domain": "…" }` vào `annotator.config.json`, tạo token. Không điền `api` / `script` / `pages`.
+AI tự hỏi LLM nếu chưa rõ (gợi ý: Codex, OpenCode, Claude; nhận Cursor), copy skill đúng chỗ, ghi `{ "domain": "…" }` vào `annotator.config.json`. Không điền `api` / `script` / `pages`.
 
 Nếu đã biết LLM, thêm một dòng: `LLM: Codex` (hoặc OpenCode / Claude / Cursor).
 
@@ -30,6 +30,8 @@ Nếu đã biết LLM, thêm một dòng: `LLM: Codex` (hoặc OpenCode / Claude
 ```
 Đọc comment trên [URL chia sẻ], reply các note chưa xong. Không đánh Done.
 ```
+
+Hoặc mở panel ghi chú, bấm **AI**, dán vào chat AI.
 
 ## Trông như thế nào
 
@@ -45,7 +47,7 @@ Bốn case trên trang đã chèn script.
 
 ![Ghim trên ảnh](screenshots/02-image-pin.png)
 
-**4. Panel ghi chú** (Alt+N) → list, id `A01`, export JSON
+**4. Panel ghi chú** (Alt+N) → list, id `A01`, nút **AI**, icon export / import
 
 ![Panel ghi chú](screenshots/03-notes-panel.png)
 
@@ -85,7 +87,7 @@ Commit ở root repo. Một field:
 
 Suy ra: embed `{domain}/index.php`, API `{domain}/annotations.php`, trang `{domain}/index.php?name={slug}`.
 
-Token (không commit): `.annotator-token` trên máy bạn. Server: `anno-data/.ai-token` cạnh file PHP trong `host/`, hoặc env `ANNOTATOR_AI_TOKEN`.
+Comment không cần token (GET + POST reply). Upload HTML vẫn dùng Bearer: `anno-data/.ai-token` cạnh file PHP trong `host/`, hoặc env `ANNOTATOR_AI_TOKEN`. File `.annotator-token` còn sót là cùng một secret, không phải vai trò thứ hai.
 
 ## Skill path
 
@@ -100,12 +102,12 @@ Gốc trong repo này: `skill/easy-annotator/`.
 
 ## Dùng trên trang
 
-Bôi chữ → + Note. Icon Pin → click menu, nút, hoặc shape. Click ảnh → ghim. Kéo ảnh → vùng. Alt+N panel. Esc đóng popover, rồi Pin mode, rồi panel. Chỉ sửa note của mình. Resolve trên reply. AI chỉ đọc và reply. Id: `A01`…`A99`, rồi `B01`.
+Bôi chữ → + Note. Icon Pin → click menu, nút, hoặc shape. Click ảnh → ghim. Kéo ảnh → vùng. Alt+N panel. Esc đóng popover, rồi Pin mode, rồi panel. Nút **AI** copy prompt reply (không nhét token vào clipboard). Chỉ sửa note của mình. Resolve trên reply. AI chỉ đọc và reply. Id: `A01`…`A99`, rồi `B01`.
 
 ## Hosting (một lần)
 
 1. Upload **nội dung** `host/` lên folder PHP public.
-2. Tạo token, ghi `anno-data/.ai-token` (chmod 600) trên server. AI setup có thể làm bước này nếu checkout này chứa `host/`.
+2. Chỉ khi AI PUT HTML: ghi `anno-data/.ai-token` (chmod 600) trên server, hoặc env `ANNOTATOR_AI_TOKEN`. Reply không dùng token này.
 3. Demo local: trỏ vhost vào `host/` (xem `dev.md`).
 
 `anno-data/` tự tạo, không public.
@@ -120,7 +122,7 @@ Cron tùy chọn (tuổi ghi trên crontab, không cấu hình trong PHP). Xóa 
 
 ## Chống spam (ngắn)
 
-Mở để comment, không captcha. Trần server: 10 ghi/IP/phút, 40 ghi/trang/phút, 8 URL mới/10 phút/IP, 200 note/trang, 4000 ký tự, JSON 256 KB, PUT cần `X-Owner-Key`, upload HTML cần token AI. Honeypot trình duyệt chỉ chặn bot form. Sau Cloudflare: `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` nếu cần. Không làm trang `/setup` public.
+Mở để comment, không captcha. Trần server: 10 ghi/IP/phút, 40 ghi/trang/phút, 8 URL mới/10 phút/IP, 200 note/trang, 4000 ký tự, JSON 256 KB. PUT note cần `X-Owner-Key`. AI reply là POST công khai (có rate limit). Upload HTML cần token AI. Honeypot trình duyệt chỉ chặn bot form. Sau Cloudflare: `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` nếu cần. Không làm trang `/setup` public.
 
 ## Gợi ý
 

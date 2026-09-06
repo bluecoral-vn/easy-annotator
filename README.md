@@ -1,6 +1,6 @@
 # Easy Annotator
 
-[English](README.md) | [Tiếng Việt](README.vi.md)
+[ENGLISH](README.md) | [VIỆT NAM](README.VN.md)
 
 Notes on HTML: select text, pin a control, pin images, save JSON, AI reads and replies. PHP 7.4+, no npm.
 
@@ -21,7 +21,7 @@ Setup Easy Annotator from https://github.com/bluecoral-vn/easy-annotator
 Domain: https://YOUR_HOST/easy-annotator
 ```
 
-The AI detects the coding agent if needed (Codex, OpenCode, Claude; Cursor is fine), copies the skill, writes `{ "domain": "…" }` to `annotator.config.json`, and creates a token. Do not fill `api` / `script` / `pages`.
+The AI detects the coding agent if needed (Codex, OpenCode, Claude; Cursor is fine), copies the skill, and writes `{ "domain": "…" }` to `annotator.config.json`. Do not fill `api` / `script` / `pages`.
 
 If you already know the agent, add: `LLM: Codex` (or OpenCode / Claude / Cursor).
 
@@ -30,6 +30,8 @@ If you already know the agent, add: `LLM: Codex` (or OpenCode / Claude / Cursor)
 ```
 Read comments on [share URL], reply to open notes. Do not mark Done.
 ```
+
+Or open the notes panel and click **AI**, then paste that into any AI chat.
 
 ## What it looks like
 
@@ -45,7 +47,7 @@ Four cases on a page with the embed script.
 
 ![Pin on an image](screenshots/02-image-pin.png)
 
-**4. Notes panel** (Alt+N) → list, public ids `A01`, export JSON
+**4. Notes panel** (Alt+N) → list, public ids `A01`, **AI** prompt, export / import icons
 
 ![Notes panel](screenshots/03-notes-panel.png)
 
@@ -85,7 +87,7 @@ Committed at the repo root. One field:
 
 Derived: embed `{domain}/index.php`, API `{domain}/annotations.php`, page `{domain}/index.php?name={slug}`.
 
-Token (not in git): `.annotator-token` on your machine. Server: `anno-data/.ai-token` next to the PHP files in `host/`, or env `ANNOTATOR_AI_TOKEN`.
+Comments need no token (GET + POST reply). HTML upload still uses Bearer: `anno-data/.ai-token` next to the PHP files in `host/`, or env `ANNOTATOR_AI_TOKEN`. Leftover `.annotator-token` is the same secret, not a second role.
 
 ## Skill paths
 
@@ -100,12 +102,12 @@ Source in this repo: `skill/easy-annotator/`.
 
 ## On the page
 
-Select text → + Note. Pin icon → click a menu, button, or shape. Click image → pin. Drag on image → region. Alt+N panel. Esc closes the popover, then Pin mode, then the panel. Edit only your notes. Resolve on replies. AI reads and replies only. Ids: `A01`…`A99`, then `B01`.
+Select text → + Note. Pin icon → click a menu, button, or shape. Click image → pin. Drag on image → region. Alt+N panel. Esc closes the popover, then Pin mode, then the panel. **AI** copies a reply prompt (no token in the clipboard). Edit only your notes. Resolve on replies. AI reads and replies only. Ids: `A01`…`A99`, then `B01`.
 
 ## Hosting (once)
 
 1. Upload the **contents** of `host/` to a public PHP folder.
-2. Create a token, write `anno-data/.ai-token` (chmod 600) on the server. Setup can do this if the checkout contains `host/`.
+2. Only if AI should PUT HTML: write `anno-data/.ai-token` (chmod 600) on the server, or set env `ANNOTATOR_AI_TOKEN`. Replies do not use this.
 3. Local demo: point the vhost at `host/` (see `dev.md`).
 
 `anno-data/` is created automatically and is not public.
@@ -120,7 +122,7 @@ Optional cron (age is on the crontab, not in PHP). Deletes `anno-data/*.json` pa
 
 ## Abuse limits (short)
 
-Open comments, no captcha. Server caps: 10 writes/IP/minute, 40 writes/page/minute, 8 new URLs/10 min/IP, 200 notes/page, 4000 characters, 256 KB JSON, PUT needs `X-Owner-Key`, HTML upload needs the AI token. The browser honeypot only stops naive form bots. Behind Cloudflare set `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` if needed. No public `/setup` page.
+Open comments, no captcha. Server caps: 10 writes/IP/minute, 40 writes/page/minute, 8 new URLs/10 min/IP, 200 notes/page, 4000 characters, 256 KB JSON. Note PUT needs `X-Owner-Key`. AI reply is a public POST (rate-limited). HTML upload needs the AI token. The browser honeypot only stops naive form bots. Behind Cloudflare set `ANNOTATOR_CLIENT_IP_HEADER=CF-Connecting-IP` if needed. No public `/setup` page.
 
 ## Suggestions
 

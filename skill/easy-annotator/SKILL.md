@@ -10,7 +10,8 @@ Self-hosted notes on HTML. Config is one field: `domain`. Derive:
 - embed = `{domain}/index.php`
 - api = `{domain}/annotations.php`
 - page = `{domain}/index.php?name={slug}`
-- token = `.annotator-token` (never in git)
+- comments: GET + POST reply, no token
+- HTML PUT token (optional, only to upload pages): env `ANNOTATOR_AI_TOKEN`, or `host/anno-data/.ai-token` if this checkout has `host/`
 
 This git repo has two trees. **Never upload the whole repo to PHP hosting.**
 
@@ -68,9 +69,9 @@ https://raw.githubusercontent.com/bluecoral-vn/easy-annotator/main/skill/easy-an
 
 When embedding or uploading, always `json.load` this file and use `domain`. Never guess the host.
 
-5. If `.annotator-token` is missing, generate one and write it (chmod 600). If this checkout contains `host/index.php`, also write the same value to `host/anno-data/.ai-token` (PHP data dir next to the host files). Otherwise tell the user once: put that value on the server as `anno-data/.ai-token` or env `ANNOTATOR_AI_TOKEN`.
+5. HTML PUT token only if this checkout contains `host/index.php`. If `host/anno-data/.ai-token` is missing, generate one (chmod 600). Do **not** write `.annotator-token`. Docs repos: comments need no token. For HTML PUT, use env `ANNOTATOR_AI_TOKEN`, leftover `.annotator-token`, or ask once for the server `anno-data/.ai-token` value.
 
-6. Ensure `.gitignore` has `.annotator-token` and `anno-data/`. Do **not** gitignore `annotator.config.json` (it only holds the public domain).
+6. Ensure `.gitignore` has `anno-data/` (and `.annotator-token` if leftover). Do **not** gitignore `annotator.config.json` (it only holds the public domain).
 
 Then continue the user's task. Do not paste curl cheatsheets at the user.
 
@@ -82,7 +83,9 @@ Then continue the user's task. Do not paste curl cheatsheets at the user.
 
 ```bash
 DOMAIN=$(python3 -c 'import json; print(json.load(open("annotator.config.json"))["domain"].rstrip("/"))')
-TOKEN=$(cat .annotator-token)
+TOKEN="${ANNOTATOR_AI_TOKEN:-}"
+if [ -z "$TOKEN" ] && [ -f host/anno-data/.ai-token ]; then TOKEN=$(cat host/anno-data/.ai-token); fi
+if [ -z "$TOKEN" ] && [ -f .annotator-token ]; then TOKEN=$(cat .annotator-token); fi
 RESP=$(curl -sS -X PUT "$DOMAIN/index.php?name=my-slug" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: text/html; charset=utf-8" \
@@ -100,12 +103,10 @@ AI may **read** and **reply**. Do not edit or delete a human comment. Do not mar
 DOMAIN=$(python3 -c 'import json; print(json.load(open("annotator.config.json"))["domain"].rstrip("/"))')
 API="$DOMAIN/annotations.php"
 PAGE_URL="$DOMAIN/index.php?name=my-slug"
-TOKEN=$(cat .annotator-token)
 
 curl -sS "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$PAGE_URL")"
 
 curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$PAGE_URL")&action=reply&id=A01" \
-  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"text":"Updated the headline on slide 2","author":"AI"}'
 ```
@@ -113,7 +114,7 @@ curl -sS -X POST "$API?url=$(python3 -c "import urllib.parse,sys; print(urllib.p
 ## Do not
 
 - Upload `skill/`, README, tests, or `.cursor/` to PHP hosting. Hosting is `host/` contents only.
-- Put tokens in git or in HTML.
+- Put tokens in git, in HTML, or in the AI-button clipboard.
 - Ask the user to set `api`, `script`, or `pages`, or to paste `annotator.js` / `ANNOTATOR_API`.
 - Ask the user to run curl. The agent runs it.
 - Store comment TTL in PHP. Optional purge is crontab: `php cron-purge.php 90d` (CLI only).

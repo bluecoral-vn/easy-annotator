@@ -3,8 +3,8 @@
    SPDX-License-Identifier: GPL-3.0-or-later
    API is inferred from the script URL (index.php or annotator.js → annotations.php).
    optional override: window.ANNOTATOR_API="https://host/annotations.php"
-   AI reply: POST $API?url=&action=reply&id=A01  Authorization: Bearer <anno-data/.ai-token>
-   no API = localStorage mode (http, https, file://) */
+   AI reply: POST $API?url=&action=reply&id=A01  JSON {"text":"...","author":"AI"}
+   HTML PUT still uses Bearer (anno-data/.ai-token). no API = localStorage mode. */
 (function(root){
 'use strict';
 
@@ -733,10 +733,15 @@ function injectStyle(){
   '.bc-anno-dragbox{position:fixed;border:1.5px dashed #FF5600;background:rgba(255,86,0,.1);z-index:2147483003;pointer-events:none;border-radius:10px;}'+
   '.bc-anno-sb{position:fixed;right:16px;bottom:16px;width:400px;max-width:calc(100vw - 24px);height:80vh;max-height:80vh;background:#fff;border:1px solid #D3CEC6;border-radius:24px;box-shadow:0 12px 40px rgba(17,17,17,.12);z-index:2147483000;display:flex;flex-direction:column;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#111;overflow:hidden;}'+
   '.bc-anno-sb.bc-hide{opacity:0;pointer-events:none;visibility:hidden;transform:translate(12px,16px);}'+
-  '.bc-anno-sb-h{padding:12px 10px 12px 14px;background:#fff;color:#111;flex:none;display:flex;align-items:center;gap:6px;border-bottom:1px solid #EBE7E1;}'+
-  '.bc-anno-sb-h select,.bc-anno-sb-h button:not(.bc-anno-x){font-size:11px;padding:6px 10px;border-radius:999px;border:none;background:#F5F1EC;color:#111;cursor:pointer;font-weight:600;}'+
+  '.bc-anno-sb-h{padding:12px 8px 12px 12px;background:#fff;color:#111;flex:none;display:flex;align-items:center;flex-wrap:nowrap;gap:4px;border-bottom:1px solid #EBE7E1;}'+
+  '.bc-anno-sb-h select,.bc-anno-sb-h button:not(.bc-anno-x){font-size:11px;padding:6px 8px;border-radius:999px;border:none;background:#F5F1EC;color:#111;cursor:pointer;font-weight:600;}'+
+  '.bc-anno-sb-h select{min-width:0;}'+
+  '.bc-anno-sb-h select[data-tab]{flex:none;max-width:96px;}'+
+  '.bc-anno-sb-h select[data-sort]{flex:1 1 auto;max-width:150px;}'+
   '.bc-anno-sb-h button:not(.bc-anno-x):hover,.bc-anno-sb-h select:hover{background:#EBE7E1;}'+
-  '.bc-anno-sb-h .bc-anno-x{margin-left:auto;cursor:pointer;background:none;border:none;color:#626260;font-size:18px;padding:4px 8px;line-height:1;border-radius:999px;}'+
+  '.bc-anno-sb-h button.bc-anno-ico{width:28px;height:28px;padding:0;flex:none;display:inline-flex;align-items:center;justify-content:center;}'+
+  '.bc-anno-sb-h button.bc-anno-ico svg{display:block;width:15px;height:15px;}'+
+  '.bc-anno-sb-h .bc-anno-x{margin-left:auto;cursor:pointer;background:none;border:none;color:#626260;font-size:18px;padding:4px 8px;line-height:1;border-radius:999px;flex:none;}'+
   '.bc-anno-sb-h .bc-anno-x:hover{background:#F5F1EC;color:#111;}'+
   '.bc-anno-list{flex:1;overflow-y:auto;padding:14px;min-height:0;background:#fff;}'+
   '.bc-anno-item{border:none;border-radius:16px;padding:12px 14px;margin-bottom:10px;background:#F5F1EC;cursor:pointer;}'+
@@ -957,8 +962,13 @@ function buildUI(){
       '<option value="createdDesc">Newest at top</option>'+
       '<option value="pos">By page position</option>'+
     '</select>'+
-    '<button type="button" data-export>Export</button>'+
-    '<button type="button" data-import>Import</button>'+
+    '<button type="button" data-prompt title="Copy AI prompt">AI</button>'+
+    '<button type="button" class="bc-anno-ico" data-export title="Export" aria-label="Export">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg>'+
+    '</button>'+
+    '<button type="button" class="bc-anno-ico" data-import title="Import" aria-label="Import">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 19h14"/></svg>'+
+    '</button>'+
     '<button type="button" class="bc-anno-x" data-x>&#10005;</button>'+
   '</div>'+
   '<div class="bc-anno-gate">'+
@@ -999,6 +1009,7 @@ function buildUI(){
   };
   sb.querySelector('[data-export]').onclick=exportJSON;
   sb.querySelector('[data-import]').onclick=function(){imp.click();};
+  sb.querySelector('[data-prompt]').onclick=copyAiPrompt;
   sb.querySelector('[data-name-save]').onclick=saveNameFromGate;
   sb.querySelector('[data-name-input]').addEventListener('keydown',function(e){
     if(e.key==='Enter') saveNameFromGate();
@@ -1540,6 +1551,47 @@ function fileStub(){
 function exportJSON(){
   var data=Model.exportPayload({url:location.href,title:document.title}, annos, {exportedAt:nowISO(),apiBase:API||''});
   downloadBlob('notes-'+fileStub()+'.json', JS(data,null,2), 'application/json');
+}
+function aiPromptText(){
+  var page=docKey||location.href.split('#')[0];
+  var open=annos.filter(function(a){return a.status!=='done';}).map(function(a){return a.pubId||a.id;}).filter(Boolean);
+  var lines=[
+    'Easy Annotator — reply to comments on this page. Do not mark Done. Do not edit or delete human notes.',
+    '',
+    'Page: '+page
+  ];
+  if(API){
+    lines.push('JSON: '+apiUrl());
+    lines.push('Reply: POST the JSON URL with &action=reply&id=A01');
+    lines.push('Content-Type: application/json');
+    lines.push('Body: {"text":"your reply","author":"AI"}');
+    lines.push('No Authorization header.');
+  }else{
+    lines.push('This page has no comments API (local-only). Paste exported notes, or open a hosted page.');
+  }
+  lines.push('Open ids: '+(open.length?open.join(', '):'(none yet)'));
+  return lines.join('\n');
+}
+function copyText(t, okMsg){
+  function done(ok){ toast(ok?(okMsg||'Copied'):'Copy failed'); }
+  function fallback(){
+    var ta=document.createElement('textarea');
+    ta.value=t;ta.setAttribute('data-bc-anno-ui','1');
+    ta.style.cssText='position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta);ta.select();
+    var ok=false;
+    try{ok=document.execCommand('copy');}catch(x){}
+    ta.remove();
+    done(ok);
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){done(true);}).catch(fallback);
+    return;
+  }
+  fallback();
+}
+function copyAiPrompt(){
+  copyText(aiPromptText(), 'Prompt copied');
 }
 
 function init(){
