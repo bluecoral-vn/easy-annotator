@@ -41,15 +41,17 @@ Bốn case trên trang đã chèn script.
 
 ![Bôi chữ và thêm note](screenshots/01-select-text.png)
 
-**2. Pin** (icon) → click menu, nút, hoặc shape
+**2. Pin** → click menu, nút, hoặc shape
 
-**3. Click ảnh** → ghim có số
+![Ghim một control](screenshots/02-pin-control.png)
 
-![Ghim trên ảnh](screenshots/02-image-pin.png)
+**3. Click ảnh** → ghim có số `A01`
+
+![Ghim trên ảnh](screenshots/03-image-pin.png)
 
 **4. Panel ghi chú** (Alt+N) → list, id `A01`, nút **AI**, icon export / import
 
-![Panel ghi chú](screenshots/03-notes-panel.png)
+![Panel ghi chú](screenshots/04-notes-panel.png)
 
 ## Hai thư mục (đừng lẫn)
 

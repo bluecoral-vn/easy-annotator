@@ -37,19 +37,21 @@ Or open the notes panel and click **AI**, then paste that into any AI chat.
 
 Four cases on a page with the embed script.
 
-**1. Select text** → **+ Note** button
+**1. Select text** → **+ Note**
 
 ![Select text and add a note](screenshots/01-select-text.png)
 
-**2. Pin** (icon) → click a menu, button, or shape
+**2. Pin** → click a menu, button, or shape
 
-**3. Click an image** → numbered pin
+![Pin a control](screenshots/02-pin-control.png)
 
-![Pin on an image](screenshots/02-image-pin.png)
+**3. Click an image** → numbered pin `A01`
+
+![Pin on an image](screenshots/03-image-pin.png)
 
 **4. Notes panel** (Alt+N) → list, public ids `A01`, **AI** prompt, export / import icons
 
-![Notes panel](screenshots/03-notes-panel.png)
+![Notes panel](screenshots/04-notes-panel.png)
 
 ## Two folders (do not mix)
 
