@@ -190,6 +190,15 @@ function bc_acl_merge($cur, $incoming, $ownerKey) {
             $map[$id] = $a;
         } else {
             $ex['replies'] = bc_merge_replies(isset($ex['replies']) ? $ex['replies'] : array(), isset($a['replies']) ? $a['replies'] : array(), $ownerKey);
+            // thread participants (anyone with a reply of their own) may Done/Reopen
+            if ($ownerKey !== '' && isset($a['status']) && in_array($a['status'], array('open', 'done'), true)) {
+                foreach ($ex['replies'] as $r) {
+                    if (is_array($r) && isset($r['ownerId']) && $r['ownerId'] === $ownerKey) {
+                        $ex['status'] = $a['status'];
+                        break;
+                    }
+                }
+            }
             $map[$id] = $ex;
         }
     }

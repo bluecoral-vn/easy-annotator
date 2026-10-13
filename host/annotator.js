@@ -458,6 +458,10 @@ function isMine(a){
   if(typeof a.mine==='boolean') return a.mine;
   return Model.ownsAnno(a, ownerKey());
 }
+/* owner or anyone who replied in the thread may Done/Reopen */
+function canClose(a){
+  return isMine(a)||(a.replies||[]).some(isMine);
+}
 function apiUrl(){
   return API+(API.indexOf('?')>-1?'&':'?')+'url='+encodeURIComponent(docKey);
 }
@@ -1193,6 +1197,7 @@ function itemHTML(e, pinNos){
   var excerpt=a.kind==='image'?('[Image] '+(a.alt||a.srcNorm||a.src||''))
         :a.kind==='el'?('['+((a.elTag||'el').charAt(0).toUpperCase()+(a.elTag||'el').slice(1))+'] '+(a.elName||a.exact||''))
         :(a.exact||'');
+  var canC=!foreign&&canClose(a);
   var pinNo=a.pubId||(foreign?null:(a.kind==='image'?pinNos[a.id]:null));
   var mine=!foreign&&isMine(a);
   var replies=a.replies||[];
@@ -1214,7 +1219,7 @@ function itemHTML(e, pinNos){
     : '<div class="bc-anno-acts">'+
         (mine?'<button data-act="edit">Edit</button>':'')+
         '<button data-act="reply">Reply</button>'+
-        (mine?(currentTab==='open'?'<button data-act="done" class="bc-anno-pri">Done</button>':'<button data-act="reopen" class="bc-anno-pri">Reopen</button>'):'')+
+        (canC?(currentTab==='open'?'<button data-act="done" class="bc-anno-pri">Done</button>':'<button data-act="reopen" class="bc-anno-pri">Reopen</button>'):'')+
         (mine?'<button data-act="del" class="bc-anno-dz">Delete</button>':'')+
       '</div>';
   return '<div class="bc-anno-item'+(foreign?' bc-anno-foreign':'')+'" data-id="'+esc(a.id)+'"'+
@@ -1250,6 +1255,7 @@ function loadScope(){
       .then(function(){scopeLoading=false;renderList();});
   }catch(x){scopeLoading=false;scopeErr=true;renderList();}
 }
+var lastListN=0;
 function renderList(){
   if(!sb) return;
   syncGate();
@@ -1278,12 +1284,14 @@ function renderList(){
       :(currentTab==='open'?'No notes yet.<br>Select text, Pin a control, or click an image to add one.':'No completed notes.'))+'</div>';
     return;
   }
-  var html='', keepBottom=readPrefs().sort==='createdAsc';
+  var html='', grew=entries.length>lastListN;
+  lastListN=entries.length;
   var pinNos=Model.imagePinNumbers(annos);
   entries.forEach(function(e){html+=itemHTML(e,pinNos);});
   var prev=list.scrollTop;
   list.innerHTML=html;
-  if(keepBottom) list.scrollTop=list.scrollHeight;
+  // jump to bottom only when a note was added (oldest-first sort); otherwise keep position
+  if(grew&&readPrefs().sort==='createdAsc') list.scrollTop=list.scrollHeight;
   else list.scrollTop=prev;
   list.querySelectorAll('.bc-anno-item').forEach(function(el){
     var id=el.getAttribute('data-id');
@@ -1294,7 +1302,8 @@ function renderList(){
       if(!b){jump(id);return;}
       var act=b.getAttribute('data-act');
       var a=annos.find(function(x){return x.id===id;});if(!a)return;
-      if((act==='edit'||act==='done'||act==='reopen'||act==='del')&&!isMine(a)) return;
+      if((act==='edit'||act==='del')&&!isMine(a)) return;
+      if((act==='done'||act==='reopen')&&!canClose(a)) return;
       if(act==='done'){a.status='done';a.updatedAt=nowISO();persist();refresh();}
       else if(act==='reopen'){a.status='open';a.updatedAt=nowISO();persist();refresh();}
       else if(act==='resolve-reply'){
