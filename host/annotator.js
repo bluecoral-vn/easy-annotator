@@ -449,7 +449,8 @@ var imgDrag=null,dragBox=null,skipTextSel=false;
 var pinDrag=null,pinMoved=false;
 var sb,fab,fabs,pinBtn,gateCb=null;
 var pinMode=false,elHover=null,pinHint=null,draft=null;
-var JS=JSON.stringify;
+/* Runtime-only fields (_el, _imgEl, _range) hold live DOM; React nodes are circular. */
+function JS(v,r,s){return JSON.stringify(v,function(k,x){return k.charAt(0)==='_'?undefined:x;},s);}
 
 function nowISO(){return new Date().toISOString();}
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
