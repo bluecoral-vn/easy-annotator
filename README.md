@@ -126,6 +126,7 @@ In the panel (Alt+N), the buttons switch the list:
 
 - **This page** — notes for the current URL only.
 - **All pages** — notes from every page in the group; the label next to the buttons shows the group path.
+- **All pages** quietly preloads an orange count of open notes across the group (hidden at zero), updated immediately for changes on this page; any named user can mark a note **Done / Reopen** on its own page, with **Done by** attribution, while Edit and Delete remain owner-only.
 
 A note from another page shows its page title and path with **Open on page**. Click it to go there: that page opens, the panel scrolls to the note, and the pin or highlight flashes. Reply, edit, Done, and delete stay on the note's own page.
 

@@ -126,6 +126,7 @@ Trong panel (Alt+N), hai nút đổi danh sách:
 
 - **This page** — chỉ note của URL hiện tại.
 - **All pages** — note của mọi trang trong nhóm; nhãn cạnh hai nút hiện đường dẫn nhóm.
+- **All pages** tải ngầm tổng số note chưa xong trong nhóm bằng badge cam (ẩn khi bằng 0), cập nhật ngay khi sửa trạng thái trên trang hiện tại; mọi người đã nhập tên đều có thể **Done / Reopen** trên trang của note, có dòng **Done by**, còn sửa và xóa chỉ dành cho chủ note.
 
 Note của trang khác hiện tiêu đề và đường dẫn trang kèm **Open on page**. Click để sang đó: trang đó mở ra, panel cuộn tới note, ghim hoặc highlight nháy sáng. Reply, sửa, Done và xóa vẫn ở trang của note.
 

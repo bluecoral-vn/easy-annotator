@@ -400,6 +400,22 @@ Model.sameDoc = function(a, b){
   if(!a||!b) return false;
   return String(a).split('#')[0]===String(b).split('#')[0];
 };
+Model.scopeOpenCount = function(pages, currentUrl, currentAnnos){
+  var n=0, i, j, p, url, list;
+  for(i=0;i<(currentAnnos||[]).length;i++){
+    if(currentAnnos[i]&&currentAnnos[i].status!=='done') n++;
+  }
+  for(i=0;i<(pages||[]).length;i++){
+    p=pages[i];if(!p) continue;
+    url=p.url||(p.page&&p.page.url)||'';
+    if(!url||Model.sameDoc(url,currentUrl)) continue;
+    list=p.annotations||[];
+    for(j=0;j<list.length;j++){
+      if(list[j]&&list[j].status!=='done') n++;
+    }
+  }
+  return n;
+};
 
 if(typeof module!=='undefined'&&module.exports){
   module.exports=Model;
@@ -872,10 +888,13 @@ function injectStyle(){
   '.bc-anno-sbs button:hover{background:#EBE7E1;}'+
   '.bc-anno-sbs button.bc-on{background:#111;color:#fff;}'+
   '.bc-anno-sbsn{margin-left:auto;min-width:0;font-size:11px;color:#7B7B78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'+
+  '.bc-anno-scope-n{display:none;min-width:18px;height:18px;margin-left:4px;padding:0 4px;background:#FF5600;color:#fff;border:2px solid #fff;border-radius:999px;font-size:11px;line-height:14px;vertical-align:middle;}'+
+  '.bc-anno-scope-n.bc-show{display:inline-block;}'+
   '.bc-anno-item.bc-anno-foreign{background:#fff;border:1px solid #EBE7E1;}'+
   '.bc-anno-item.bc-anno-foreign:hover{background:#F9F7F4;}'+
   '.bc-anno-src{font-size:11px;font-weight:600;color:#0007CB;margin:0 0 4px;word-break:break-word;}'+
   '.bc-anno-hint{font-size:11px;color:#7B7B78;margin-top:10px;}'+
+  '.bc-anno-doneby{font-size:11px;color:#7B7B78;margin-top:6px;}'+
   '.bc-anno-gate p{margin:0 0 10px;font-size:13px;color:#626260;}'+
   '.bc-anno-gate input{width:100%;box-sizing:border-box;border:none;border-radius:12px;padding:10px 12px;font:13px/1.5 inherit;background:#F5F1EC;}'+
   '.bc-anno-gate button{margin-top:12px;background:#FF5600;color:#fff;border:none;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;}'+
@@ -1073,7 +1092,7 @@ function buildUI(){
   '</div>'+
   '<div class="bc-anno-sbs'+(API?'':' bc-hide')+'" data-scope-bar>'+
     '<button type="button" data-scope-page class="bc-on">This page</button>'+
-    '<button type="button" data-scope-all>All pages</button>'+
+    '<button type="button" data-scope-all aria-label="All pages, 0 open" title="All pages, 0 open">All pages<span class="bc-anno-scope-n" aria-hidden="true"></span></button>'+
     '<span class="bc-anno-sbsn" data-scope-label>'+esc(Model.scopeLabel(scope))+'</span>'+
   '</div>'+
   '<div class="bc-anno-gate">'+
@@ -1163,6 +1182,16 @@ function syncFabCount(){
   el.classList.add('bc-show');
   fab.setAttribute('aria-label','Open notes, '+n+' open');
 }
+function syncScopeCount(){
+  var button=sb&&sb.querySelector('[data-scope-all]');
+  if(!button) return;
+  var el=button.querySelector('.bc-anno-scope-n');
+  var n=API?Model.scopeOpenCount(scopeData&&scopeData.pages,docKey,annos):0;
+  el.textContent=n?String(n):'';
+  el.classList.toggle('bc-show',n>0);
+  button.setAttribute('aria-label','All pages, '+n+' open');
+  button.setAttribute('title','All pages, '+n+' open');
+}
 function listEntries(){
   var out=[], i, j, pages, p, purl, pa;
   if(displayMode==='scope'&&scopeData){
@@ -1225,7 +1254,7 @@ function itemHTML(e, pinNos){
     : '<div class="bc-anno-acts">'+
         (mine?'<button data-act="edit">Edit</button>':'')+
         '<button data-act="reply">Reply</button>'+
-        (mine?(currentTab==='open'?'<button data-act="done" class="bc-anno-pri">Done</button>':'<button data-act="reopen" class="bc-anno-pri">Reopen</button>'):'')+
+        (currentTab==='open'?'<button data-act="done" class="bc-anno-pri">Done</button>':'<button data-act="reopen" class="bc-anno-pri">Reopen</button>')+
         (mine?'<button data-act="del" class="bc-anno-dz">Delete</button>':'')+
       '</div>';
   return '<div class="bc-anno-item'+(foreign?' bc-anno-foreign':'')+'" data-id="'+esc(a.id)+'"'+
@@ -1235,6 +1264,7 @@ function itemHTML(e, pinNos){
       (a.breadcrumb&&a.breadcrumb.length?'<div class="bc-anno-crumb">'+esc(a.breadcrumb.join(' > '))+'</div>':'')+
       '<div class="bc-anno-ex">'+esc(excerpt)+'</div>'+
       '<div class="bc-anno-cm">'+esc(Model.commentOf(a))+'</div>'+
+      (a.status==='done'&&a.doneBy?'<div class="bc-anno-doneby">Done by '+esc(a.doneBy)+(a.doneAt?' · '+esc(fmt(a.doneAt)):'')+'</div>':'')+
       rh+
       '<div class="bc-anno-mt"><span>'+fmt(a.updatedAt)+((a.edits&&a.edits.length>1)?' | edited '+a.edits.length+' times':'')+'</span>'+q+'</div>'+
       acts+'</div>';
@@ -1253,19 +1283,20 @@ function loadScope(){
   if(!API||scopeData||scopeLoading) return;
   var version=pageVersion;
   scopeLoading=true;scopeErr=false;
-  renderList();
+  if(displayMode==='scope') renderList();
   try{
     fetch(scopeApiUrl(),{headers:apiHeaders()})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(d){if(version!==pageVersion)return;if(d&&d.pages) scopeData=d; else scopeErr=true;})
       .catch(function(){if(version===pageVersion) scopeErr=true;})
-      .then(function(){if(version!==pageVersion)return;scopeLoading=false;renderList();});
-  }catch(x){if(version!==pageVersion)return;scopeLoading=false;scopeErr=true;renderList();}
+      .then(function(){if(version!==pageVersion)return;scopeLoading=false;syncScopeCount();if(displayMode==='scope') renderList();});
+  }catch(x){if(version!==pageVersion)return;scopeLoading=false;scopeErr=true;syncScopeCount();if(displayMode==='scope') renderList();}
 }
 function renderList(){
   if(!sb) return;
   syncGate();
   syncFabCount();
+  syncScopeCount();
   if(!readPrefs().displayName) return;
   var list=sb.querySelector('.bc-anno-list');
   var all=listEntries(), entries=[], i, nOpen=0, nDone=0;
@@ -1306,9 +1337,13 @@ function renderList(){
       if(!b){jump(id);return;}
       var act=b.getAttribute('data-act');
       var a=annos.find(function(x){return x.id===id;});if(!a)return;
-      if((act==='edit'||act==='done'||act==='reopen'||act==='del')&&!isMine(a)) return;
-      if(act==='done'){a.status='done';a.updatedAt=nowISO();persist();refresh();}
-      else if(act==='reopen'){a.status='open';a.updatedAt=nowISO();persist();refresh();}
+      if((act==='edit'||act==='del')&&!isMine(a)) return;
+      if(act==='done'){
+        ensureName(function(name){
+          a.status='done';a.doneBy=name;a.doneAt=nowISO();a.updatedAt=a.doneAt;persist();refresh();
+        });
+      }
+      else if(act==='reopen'){a.status='open';a.doneBy='';a.doneAt='';a.updatedAt=nowISO();persist();refresh();}
       else if(act==='resolve-reply'){
         var rid=b.getAttribute('data-rid');
         a.replies=a.replies||[];
@@ -1753,6 +1788,7 @@ function loadAll(){
     if(version!==pageVersion)return;
     if(recovered) persist();
     refresh();consumePendingJump();
+    if(API) loadScope();
   }
   refresh();
   if(!API){finish();return;}

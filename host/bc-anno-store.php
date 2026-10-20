@@ -190,6 +190,28 @@ function bc_acl_merge($cur, $incoming, $ownerKey) {
             $map[$id] = $a;
         } else {
             $ex['replies'] = bc_merge_replies(isset($ex['replies']) ? $ex['replies'] : array(), isset($a['replies']) ? $a['replies'] : array(), $ownerKey);
+            if (isset($a['updatedAt']) && is_string($a['updatedAt'])
+                && strcmp($a['updatedAt'], isset($ex['updatedAt']) ? (string) $ex['updatedAt'] : '') > 0
+                && (!array_key_exists('status', $a) || in_array($a['status'], array('open', 'done'), true))) {
+                if (isset($a['status'])) {
+                    $ex['status'] = $a['status'];
+                }
+                foreach (array('resolved', 'approved') as $field) {
+                    if (isset($a[$field]) && is_bool($a[$field])) {
+                        $ex[$field] = $a[$field];
+                    }
+                }
+                if (isset($a['doneBy']) && is_string($a['doneBy'])) {
+                    $L = bc_limits();
+                    $ex['doneBy'] = function_exists('mb_substr')
+                        ? mb_substr($a['doneBy'], 0, $L['maxAuthor'], 'UTF-8')
+                        : substr($a['doneBy'], 0, $L['maxAuthor']);
+                }
+                if (isset($a['doneAt']) && is_string($a['doneAt']) && strlen($a['doneAt']) <= 40) {
+                    $ex['doneAt'] = $a['doneAt'];
+                }
+                $ex['updatedAt'] = $a['updatedAt'];
+            }
             $map[$id] = $ex;
         }
     }
