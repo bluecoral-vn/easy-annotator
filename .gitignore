@@ -6,3 +6,4 @@ tests/
 .cursor/*
 !.cursor/skills/
 !.cursor/skills/**
+prod.md

@@ -120,6 +120,8 @@ Note tự gom theo **origin + thư mục**. Trang cùng thư mục dùng chung m
 
 Khác host, khác port, hoặc `http` với `https` thì không trộn. Đường dẫn kết thúc bằng `/` vốn đã là một thư mục.
 
+Điều hướng SPA qua `pushState`, `replaceState` và `popstate` (như Inertia và React Router) tự chuyển khóa lưu note theo URL từng trang mà không cần tải lại; đổi riêng hash vẫn giữ nguyên note. Note bị phiên bản cũ lưu nhầm dưới URL tải đầu tiên được khôi phục từ local storage trong cùng trình duyệt.
+
 Trong panel (Alt+N), hai nút đổi danh sách:
 
 - **This page** — chỉ note của URL hiện tại.

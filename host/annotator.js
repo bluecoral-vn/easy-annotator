@@ -412,9 +412,14 @@ var scriptEl=document.currentScript||null;
 var API=root.ANNOTATOR_API||Model.apiFromScriptSrc(scriptEl&&scriptEl.src)||null;
 var scopeCfg=null;
 try{scopeCfg=root.ANNOTATOR_SCOPE||(scriptEl&&scriptEl.getAttribute?scriptEl.getAttribute('data-scope'):null)||null;}catch(x){}
-var docKey=location.href.split('#')[0];
-var scope=Model.scopeOf(scopeCfg, location.href)||Model.scopeOf(location.href);
-var STORE_KEY='bcAnno:'+docKey;
+var docKey,scope,STORE_KEY,pageVersion=0;
+function setPage(href){
+  docKey=href.split('#')[0];
+  scope=Model.scopeOf(scopeCfg, href)||Model.scopeOf(href);
+  STORE_KEY='bcAnno:'+docKey;
+  pageVersion++;
+}
+setPage(location.href);
 var UI_KEY='bcAnno:ui';
 var OWNER_KEY='bcAnno:ownerKey';
 var HL='bc-anno-hl';
@@ -432,7 +437,13 @@ var JS=JSON.stringify;
 
 function nowISO(){return new Date().toISOString();}
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
-function debounce(fn,ms){var t;return function(){var a=arguments;clearTimeout(t);t=setTimeout(function(){fn.apply(null,a);},ms);};}
+function debounce(fn,ms){
+  var t,a;
+  function flush(){if(!t)return;clearTimeout(t);t=null;var args=a;a=null;fn.apply(null,args);}
+  function later(){a=arguments;clearTimeout(t);t=setTimeout(flush,ms);}
+  later.flush=flush;
+  return later;
+}
 function fmt(ts){try{return new Date(ts).toLocaleString('en-GB',{hour12:false});}catch(x){return ts;}}
 
 function readPrefs(){
@@ -567,7 +578,7 @@ function captureFromSelection(sel){
   if(start==null||end==null||end-start<2)return null;
   var exact=index.text.substring(start,end);
   if(exact.trim().length<2)return null;
-  return {id:Model.uid(),kind:'text',pos:start,exact:exact,
+  return {id:Model.uid(),kind:'text',url:docKey,pos:start,exact:exact,
     prefix:index.text.substring(Math.max(0,start-40),start),
     suffix:index.text.substring(end,Math.min(index.text.length,end+40)),
     breadcrumb:crumb(start),
@@ -593,7 +604,7 @@ function captureFromImage(img,xPct,yPct,wPct,hPct){
   var nrm=Model.srcNorm(src, location.href);
   var listed=pageImages(), hit=null,i;
   for(i=0;i<listed.length;i++){if(listed[i].el===img){hit=listed[i];break;}}
-  return {id:Model.uid(),kind:'image',pos:0,exact:'',
+  return {id:Model.uid(),kind:'image',url:docKey,pos:0,exact:'',
     src:src,srcNorm:nrm,alt:img.alt||'',nth:hit?hit.nth:0,
     xPct:Model.clampPct(xPct),yPct:Model.clampPct(yPct),
     wPct:Model.clampPct(wPct),hPct:Model.clampPct(hPct),
@@ -690,7 +701,7 @@ function syncElPins(){
 function captureFromEl(el, cx, cy){
   var r=el.getBoundingClientRect();
   var p=Model.pctFromClient(r, cx, cy);
-  return {id:Model.uid(),kind:'el',pos:0,exact:Model.elLabel(el),
+  return {id:Model.uid(),kind:'el',url:docKey,pos:0,exact:Model.elLabel(el),
     elTag:(el.tagName||'').toLowerCase(),elRole:Model.elRoleOf(el),
     elName:Model.elLabel(el),elNth:elNth(el),elId:el.id||'',
     xPct:p.xPct,yPct:p.yPct,wPct:0,hPct:0,
@@ -1240,15 +1251,16 @@ function setDisplayMode(mode){
 }
 function loadScope(){
   if(!API||scopeData||scopeLoading) return;
+  var version=pageVersion;
   scopeLoading=true;scopeErr=false;
   renderList();
   try{
     fetch(scopeApiUrl(),{headers:apiHeaders()})
       .then(function(r){return r.ok?r.json():null;})
-      .then(function(d){if(d&&d.pages) scopeData=d; else scopeErr=true;})
-      .catch(function(){scopeErr=true;})
-      .then(function(){scopeLoading=false;renderList();});
-  }catch(x){scopeLoading=false;scopeErr=true;renderList();}
+      .then(function(d){if(version!==pageVersion)return;if(d&&d.pages) scopeData=d; else scopeErr=true;})
+      .catch(function(){if(version===pageVersion) scopeErr=true;})
+      .then(function(){if(version!==pageVersion)return;scopeLoading=false;renderList();});
+  }catch(x){if(version!==pageVersion)return;scopeLoading=false;scopeErr=true;renderList();}
 }
 function renderList(){
   if(!sb) return;
@@ -1640,14 +1652,17 @@ document.addEventListener('mouseup',function(ev){
     box={xPct:(clientX(ev)-r.left)/(r.width||1), yPct:(clientY(ev)-r.top)/(r.height||1), wPct:0, hPct:0, rect:{left:clientX(ev),top:clientY(ev),bottom:clientY(ev)+1,width:1,height:1}};
   }
   hidePopovers();
+  var version=pageVersion;
   setTimeout(function(){
+    if(version!==pageVersion)return;
     openImageEditor(img, box.xPct, box.yPct, box.wPct, box.hPct, box.rect);
   },0);
 },true);
 
 document.addEventListener('mouseup',function(ev){
   if(editPopover) return;
-  setTimeout(function(){onMouseup(ev);},0);
+  var version=pageVersion;
+  setTimeout(function(){if(version===pageVersion) onMouseup(ev);},0);
 });
 document.addEventListener('click',function(ev){
   if(!selButton&&!editPopover) return;
@@ -1702,30 +1717,79 @@ function clientRateHit(){
   return true;
 }
 function persist(){
-  try{localStorage.setItem(STORE_KEY,JS(docJSON()));}catch(x){}
-  if(API) remoteSave();
+  var body=JS(docJSON());
+  try{localStorage.setItem(STORE_KEY,body);}catch(x){}
+  if(API) remoteSave(apiUrl(),body);
 }
-var remoteSave=debounce(function(){
+var remoteSave=debounce(function(url,body){
   if(!clientRateHit()){toast('Rate limit: wait a minute');return;}
-  try{fetch(apiUrl(),{
-    method:'PUT',headers:apiHeaders(true),body:JS(docJSON())})
+  try{fetch(url,{
+    method:'PUT',headers:apiHeaders(true),body:body})
     .then(function(res){if(res&&res.status===429) toast('Rate limit: wait a minute');})
     .catch(function(){});}catch(x){}
 },900);
 function loadLocal(){
-  try{var s=localStorage.getItem(STORE_KEY);if(!s)return;
-    ingestDoc(JSON.parse(s));}catch(x){}
+  try{var s=localStorage.getItem(STORE_KEY);if(s) ingestDoc(JSON.parse(s));}catch(x){}
+  var recovered=[],i,key,d,list,j,a,before=annos.length;
+  try{
+    for(i=0;i<localStorage.length;i++){
+      key=localStorage.key(i);
+      if(!key||key.indexOf('bcAnno:')!==0||key===STORE_KEY||key===UI_KEY||key===OWNER_KEY||key===RATE_KEY||key.indexOf('bcAnno:jump:')===0) continue;
+      try{d=JSON.parse(localStorage.getItem(key));}catch(x){continue;}
+      list=d&&d.annotations;
+      if(!Array.isArray(list)) continue;
+      for(j=0;j<list.length;j++){
+        a=list[j];
+        if(a&&a.id&&(a.url?Model.sameDoc(a.url,docKey):Model.sameDoc(d.page&&d.page.url,docKey))) recovered.push(a);
+      }
+    }
+  }catch(x){}
+  if(recovered.length) ingestDoc({annotations:recovered});
+  return annos.length>before;
 }
 function loadAll(){
-  loadLocal();
-  if(!API){refresh();consumePendingJump();return;}
+  var version=pageVersion,recovered=loadLocal();
+  function finish(){
+    if(version!==pageVersion)return;
+    if(recovered) persist();
+    refresh();consumePendingJump();
+  }
+  refresh();
+  if(!API){finish();return;}
   var ctl=('AbortController'in window)?new AbortController():null;
   if(ctl) setTimeout(function(){ctl.abort();},2500);
   try{fetch(apiUrl(),ctl?{signal:ctl.signal,headers:apiHeaders()}:{headers:apiHeaders()})
     .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){if(d) ingestDoc(d);})
+    .then(function(d){if(version===pageVersion&&d) ingestDoc(d);})
     .catch(function(){})
-    .then(function(){refresh();consumePendingJump();});}catch(x){refresh();consumePendingJump();}
+    .then(finish);}catch(x){finish();}
+}
+function checkPage(){
+  if(Model.sameDoc(location.href,docKey)) return;
+  remoteSave.flush();
+  setPinMode(false);
+  imgDrag=null;pinDrag=null;pinMoved=false;skipTextSel=false;gateCb=null;
+  if(dragBox){dragBox.remove();dragBox=null;}
+  clearHl();clearImgMarks();clearElPins();
+  annos=[];deletedIds=[];scopeData=null;scopeLoading=false;scopeErr=false;
+  setPage(location.href);
+  if(sb){
+    var label=sb.querySelector('[data-scope-label]');
+    if(label) label.textContent=Model.scopeLabel(scope);
+    setDisplayMode('page');
+    loadAll();
+  }
+}
+function watchPage(){
+  ['pushState','replaceState'].forEach(function(name){
+    var original=history[name];
+    history[name]=function(){
+      var result=original.apply(this,arguments);
+      checkPage();
+      return result;
+    };
+  });
+  window.addEventListener('popstate',checkPage);
 }
 function downloadBlob(name, text, mime){
   var blob=new Blob([text],{type:mime});
@@ -1783,7 +1847,8 @@ function copyAiPrompt(){
 }
 
 function init(){
-  injectStyle();buildUI();
+  setPage(location.href);
+  injectStyle();buildUI();watchPage();
   index=buildIndex();lastText=index.text;
   loadAll();
   document.addEventListener('click',function(ev){

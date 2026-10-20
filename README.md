@@ -120,6 +120,8 @@ Notes group by **origin + folder**, automatically. Sibling pages share one group
 
 Different host, port, or `http` vs `https` never mixes. A path ending in `/` is already a folder.
 
+SPA navigation via `pushState`, `replaceState`, and `popstate` (including Inertia and React Router) keeps notes keyed to each page URL without a reload; hash-only changes keep the same notes. Notes stranded under the first-loaded URL by older versions are recovered from local storage in the same browser.
+
 In the panel (Alt+N), the buttons switch the list:
 
 - **This page** — notes for the current URL only.
